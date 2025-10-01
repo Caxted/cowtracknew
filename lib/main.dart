@@ -5,6 +5,14 @@ import 'package:sizer/sizer.dart';
 import '../core/app_export.dart';
 import '../widgets/custom_error_widget.dart';
 
+// Import the login-related pages
+import '../widgets/Login/login_page.dart';
+import '../widgets/Login/signup.dart';
+import '../widgets/Login/forgotpassword.dart';
+
+// Import your dashboard page
+import '../presentation/dashboard_home/dashboard_screen.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -16,7 +24,7 @@ void main() async {
       _hasShownError = true;
 
       // Reset flag after 3 seconds to allow error widget on new screens
-      Future.delayed(Duration(seconds: 5), () {
+      Future.delayed(const Duration(seconds: 5), () {
         _hasShownError = false;
       });
 
@@ -24,18 +32,18 @@ void main() async {
         errorDetails: details,
       );
     }
-    return SizedBox.shrink();
+    return const SizedBox.shrink();
   };
 
   // 🚨 CRITICAL: Device orientation lock - DO NOT REMOVE
-  Future.wait([
-    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp])
-  ]).then((value) {
-    runApp(MyApp());
-  });
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Sizer(builder: (context, orientation, screenType) {
@@ -44,7 +52,7 @@ class MyApp extends StatelessWidget {
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
         themeMode: ThemeMode.light,
-        // 🚨 CRITICAL: NEVER REMOVE OR MODIFY
+
         builder: (context, child) {
           return MediaQuery(
             data: MediaQuery.of(context).copyWith(
@@ -53,10 +61,19 @@ class MyApp extends StatelessWidget {
             child: child!,
           );
         },
-        // 🚨 END CRITICAL SECTION
         debugShowCheckedModeBanner: false,
-        routes: AppRoutes.routes,
-        initialRoute: AppRoutes.initial,
+
+        // Updated routes
+        routes: {
+          '/login': (context) => const LoginPage(),
+          '/register': (context) => const SignupPage(),
+          '/forgot': (context) => const ForgotPasswordPage(),
+          '/dashboard': (context) => const DashboardScreen(), // ✅ Correct widget
+          ...AppRoutes.routes,
+        },
+
+        // 🔥 Start app with login page
+        initialRoute: '/login',
       );
     });
   }
