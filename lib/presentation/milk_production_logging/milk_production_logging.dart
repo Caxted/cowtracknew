@@ -26,7 +26,6 @@ class _MilkProductionLoggingState extends State<MilkProductionLogging>
   Map<String, dynamic>? _selectedCow;
   bool _showInputOverlay = false;
 
-  // Mock production data
   double _todayTotal = 142.5;
   double _yesterdayTotal = 138.2;
   int _recordedCows = 3;
@@ -50,7 +49,7 @@ class _MilkProductionLoggingState extends State<MilkProductionLogging>
   void _handleTabChange() {
     setState(() {
       _selectedMode =
-          _tabController.index == 0 ? InputMode.individual : InputMode.batch;
+      _tabController.index == 0 ? InputMode.individual : InputMode.batch;
     });
   }
 
@@ -92,48 +91,48 @@ class _MilkProductionLoggingState extends State<MilkProductionLogging>
       ),
       body: Stack(
         children: [
-          Column(
-            children: [
-              DateSelectorWidget(
-                selectedDate: _selectedDate,
-                onDateChanged: (date) {
-                  setState(() {
-                    _selectedDate = date;
-                  });
-                },
-              ),
-              ProductionSummaryWidget(
-                todayTotal: _todayTotal,
-                yesterdayTotal: _yesterdayTotal,
-                unit: 'L',
-                recordedCows: _recordedCows,
-                totalCows: _totalCows,
-              ),
-              TimeSessionSelectorWidget(
-                selectedSession: _selectedSession,
-                onSessionChanged: (session) {
-                  setState(() {
-                    _selectedSession = session;
-                  });
-                },
-                selectedTime: _selectedTime,
-                onTimeChanged: (time) {
-                  setState(() {
-                    _selectedTime = time;
-                  });
-                },
-              ),
-              _buildTabBar(),
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
+          SafeArea(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: 8.h),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _buildIndividualMode(),
-                    _buildBatchMode(),
+                    DateSelectorWidget(
+                      selectedDate: _selectedDate,
+                      onDateChanged: (date) =>
+                          setState(() => _selectedDate = date),
+                    ),
+                    ProductionSummaryWidget(
+                      todayTotal: _todayTotal,
+                      yesterdayTotal: _yesterdayTotal,
+                      unit: 'L',
+                      recordedCows: _recordedCows,
+                      totalCows: _totalCows,
+                    ),
+                    TimeSessionSelectorWidget(
+                      selectedSession: _selectedSession,
+                      onSessionChanged: (session) =>
+                          setState(() => _selectedSession = session),
+                      selectedTime: _selectedTime,
+                      onTimeChanged: (time) =>
+                          setState(() => _selectedTime = time),
+                    ),
+                    _buildTabBar(),
+                    SizedBox(
+                      height: 50.h, // prevents overflow for tab content
+                      child: TabBarView(
+                        controller: _tabController,
+                        children: [
+                          _buildIndividualMode(),
+                          _buildBatchMode(),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ],
+            ),
           ),
           if (_showInputOverlay && _selectedCow != null)
             MilkInputOverlayWidget(
@@ -151,23 +150,24 @@ class _MilkProductionLoggingState extends State<MilkProductionLogging>
       bottomNavigationBar: _buildBottomNavigation(),
       floatingActionButton: _selectedMode == InputMode.individual
           ? FloatingActionButton.extended(
-              onPressed: _showQuickEntry,
-              backgroundColor: AppTheme.lightTheme.colorScheme.secondary,
-              foregroundColor: AppTheme.lightTheme.colorScheme.onSecondary,
-              icon: CustomIconWidget(
-                iconName: 'add',
-                color: AppTheme.lightTheme.colorScheme.onSecondary,
-                size: 20,
-              ),
-              label: Text(
-                'Quick Entry',
-                style: AppTheme.lightTheme.textTheme.labelMedium?.copyWith(
-                  color: AppTheme.lightTheme.colorScheme.onSecondary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            )
+        onPressed: _showQuickEntry,
+        backgroundColor: AppTheme.lightTheme.colorScheme.secondary,
+        foregroundColor: AppTheme.lightTheme.colorScheme.onSecondary,
+        icon: CustomIconWidget(
+          iconName: 'add',
+          color: AppTheme.lightTheme.colorScheme.onSecondary,
+          size: 20,
+        ),
+        label: Text(
+          'Quick Entry',
+          style: AppTheme.lightTheme.textTheme.labelMedium?.copyWith(
+            color: AppTheme.lightTheme.colorScheme.onSecondary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      )
           : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
@@ -189,12 +189,12 @@ class _MilkProductionLoggingState extends State<MilkProductionLogging>
         ),
         labelColor: AppTheme.lightTheme.colorScheme.onPrimary,
         unselectedLabelColor:
-            AppTheme.lightTheme.colorScheme.onSurface.withValues(alpha: 0.7),
+        AppTheme.lightTheme.colorScheme.onSurface.withValues(alpha: 0.7),
         labelStyle: AppTheme.lightTheme.textTheme.labelMedium?.copyWith(
           fontWeight: FontWeight.w600,
         ),
         unselectedLabelStyle:
-            AppTheme.lightTheme.textTheme.labelMedium?.copyWith(
+        AppTheme.lightTheme.textTheme.labelMedium?.copyWith(
           fontWeight: FontWeight.w500,
         ),
         tabs: [
@@ -207,7 +207,7 @@ class _MilkProductionLoggingState extends State<MilkProductionLogging>
                   color: _tabController.index == 0
                       ? AppTheme.lightTheme.colorScheme.onPrimary
                       : AppTheme.lightTheme.colorScheme.onSurface
-                          .withValues(alpha: 0.7),
+                      .withValues(alpha: 0.7),
                   size: 16,
                 ),
                 SizedBox(width: 1.w),
@@ -224,7 +224,7 @@ class _MilkProductionLoggingState extends State<MilkProductionLogging>
                   color: _tabController.index == 1
                       ? AppTheme.lightTheme.colorScheme.onPrimary
                       : AppTheme.lightTheme.colorScheme.onSurface
-                          .withValues(alpha: 0.7),
+                      .withValues(alpha: 0.7),
                   size: 16,
                 ),
                 SizedBox(width: 1.w),
@@ -267,8 +267,7 @@ class _MilkProductionLoggingState extends State<MilkProductionLogging>
         ],
       ),
       child: SafeArea(
-        child: Container(
-          height: 8.h,
+        child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -314,7 +313,7 @@ class _MilkProductionLoggingState extends State<MilkProductionLogging>
                 color: isSelected
                     ? AppTheme.lightTheme.colorScheme.primary
                     : AppTheme.lightTheme.colorScheme.onSurface
-                        .withValues(alpha: 0.6),
+                    .withValues(alpha: 0.6),
                 size: 20,
               ),
               SizedBox(height: 0.5.h),
@@ -324,7 +323,7 @@ class _MilkProductionLoggingState extends State<MilkProductionLogging>
                   color: isSelected
                       ? AppTheme.lightTheme.colorScheme.primary
                       : AppTheme.lightTheme.colorScheme.onSurface
-                          .withValues(alpha: 0.6),
+                      .withValues(alpha: 0.6),
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                 ),
               ),

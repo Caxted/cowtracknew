@@ -96,7 +96,7 @@ class CustomBottomBar extends StatelessWidget {
       ),
       child: SafeArea(
         child: Container(
-          height: 72,
+          height: 80, // Slightly increased height to prevent overflow
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -105,13 +105,11 @@ class CustomBottomBar extends StatelessWidget {
               final item = entry.value;
               final isSelected = index == currentIndex;
 
-              return Expanded(
-                child: _buildNavItem(
-                  context,
-                  item,
-                  isSelected,
-                  index,
-                ),
+              return _buildNavItem(
+                context,
+                item,
+                isSelected,
+                index,
               );
             }).toList(),
           ),
@@ -122,11 +120,11 @@ class CustomBottomBar extends StatelessWidget {
 
   /// Builds individual navigation item
   Widget _buildNavItem(
-    BuildContext context,
-    BottomNavItem item,
-    bool isSelected,
-    int index,
-  ) {
+      BuildContext context,
+      BottomNavItem item,
+      bool isSelected,
+      int index,
+      ) {
     final theme = Theme.of(context);
     final selectedColor = selectedItemColor ?? theme.colorScheme.primary;
     final unselectedColor =
@@ -138,7 +136,7 @@ class CustomBottomBar extends StatelessWidget {
         onTap: () => _handleTap(context, index, item.route),
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
@@ -148,9 +146,9 @@ class CustomBottomBar extends StatelessWidget {
                 padding: const EdgeInsets.all(4),
                 decoration: isSelected
                     ? BoxDecoration(
-                        color: selectedColor.withAlpha(26),
-                        borderRadius: BorderRadius.circular(8),
-                      )
+                  color: selectedColor.withAlpha(26),
+                  borderRadius: BorderRadius.circular(8),
+                )
                     : null,
                 child: Icon(
                   isSelected ? (item.activeIcon ?? item.icon) : item.icon,
@@ -161,18 +159,21 @@ class CustomBottomBar extends StatelessWidget {
 
               const SizedBox(height: 4),
 
-              // Label
+              // Label with Flexible to prevent overflow
               if (showLabels)
-                Text(
-                  item.label,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                    color: isSelected ? selectedColor : unselectedColor,
+                Flexible(
+                  child: Text(
+                    item.label,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight:
+                      isSelected ? FontWeight.w600 : FontWeight.w400,
+                      color: isSelected ? selectedColor : unselectedColor,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
             ],
           ),
@@ -183,14 +184,10 @@ class CustomBottomBar extends StatelessWidget {
 
   /// Handles navigation item tap
   void _handleTap(BuildContext context, int index, String route) {
-    // Call the onTap callback if provided
     onTap?.call(index);
 
-    // Navigate to the selected route if it's different from current
     final currentRoute = ModalRoute.of(context)?.settings.name;
     if (currentRoute != route) {
-      // Use pushReplacementNamed to replace the current route
-      // This prevents building up a large navigation stack
       Navigator.pushReplacementNamed(context, route);
     }
   }

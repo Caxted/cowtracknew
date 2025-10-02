@@ -9,7 +9,7 @@ import './widgets/promotional_banner_widget.dart' as promo;
 import './widgets/service_card_widget.dart' as service;
 
 import './widgets/stats_card_widget.dart';
-
+import 'package:cowtrack/widgets/chatbot/cow_chatbot.dart';
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -458,24 +458,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _onAddCattleTap,
-        icon: CustomIconWidget(
-          iconName: 'add',
-          color:
-          theme.floatingActionButtonTheme.foregroundColor ?? Colors.white,
-          size: 5.w,
-        ),
-        label: Text(
-          'Add Cattle',
-          style: theme.textTheme.labelLarge?.copyWith(
-            color:
-            theme.floatingActionButtonTheme.foregroundColor ?? Colors.white,
-            fontWeight: FontWeight.w600,
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          // 🟢 Chatbot Button
+          CowChatbot(),
+          const SizedBox(height: 12),
+
+          // 🐄 Existing Add Cattle Button
+          FloatingActionButton.extended(
+            onPressed: _onAddCattleTap,
+            icon: CustomIconWidget(
+              iconName: 'add',
+              color:
+              theme.floatingActionButtonTheme.foregroundColor ?? Colors.white,
+              size: 5.w,
+            ),
+            label: Text(
+              'Add Cattle',
+              style: theme.textTheme.labelLarge?.copyWith(
+                color:
+                theme.floatingActionButtonTheme.foregroundColor ?? Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            backgroundColor: theme.floatingActionButtonTheme.backgroundColor,
           ),
-        ),
-        backgroundColor: theme.floatingActionButtonTheme.backgroundColor,
+        ],
       ),
+
       bottomNavigationBar: CustomBottomBar(
         currentIndex: 0,
       ),

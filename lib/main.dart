@@ -12,6 +12,7 @@ import '../widgets/Login/forgotpassword.dart';
 
 // Import your dashboard page
 import '../presentation/dashboard_home/dashboard_screen.dart';
+import 'widgets/chatbot/cow_chatbot.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

@@ -44,8 +44,9 @@ flutter:
 
   assets:
     - assets/
-    - assets/images/
-    - assets/Login/
+    - assets/images/download.jpeg
+    - assets/images/download2.jpeg
+    - assets/images/download1.jpeg
     - assets/cow_animation.json
     - assets/cow_animation2.json
     - assets/cow_animation3.json
