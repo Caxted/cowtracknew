@@ -188,7 +188,8 @@ class CustomBottomBar extends StatelessWidget {
 
     final currentRoute = ModalRoute.of(context)?.settings.name;
     if (currentRoute != route) {
-      Navigator.pushReplacementNamed(context, route);
+      Navigator.pushNamedAndRemoveUntil(context, route, (r) => r.isFirst);
+
     }
   }
 

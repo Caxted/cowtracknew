@@ -10,6 +10,7 @@ import './widgets/service_card_widget.dart' as service;
 
 import './widgets/stats_card_widget.dart';
 import 'package:cowtrack/widgets/chatbot/cow_chatbot.dart';
+import 'package:cowtrack/presentation/dashboard_home/vet_screen.dart';
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -166,10 +167,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void _onServiceCardTap(String route) {
     HapticFeedback.lightImpact();
-    if (route != '/dashboard-screen') {
+    if (route == '/veterinarian-directory-screen') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const VetScreen()),
+      );
+    } else if (route != '/dashboard-screen') {
       Navigator.pushNamed(context, route);
     }
   }
+
 
   void _onNotificationTap() {
     HapticFeedback.lightImpact();

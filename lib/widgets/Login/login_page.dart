@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
-import 'signup.dart';
-import 'forgotpassword.dart';
+
+// ⭐ ADD THIS ⭐
+import '../../services/auth_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -12,10 +13,15 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage>
     with SingleTickerProviderStateMixin {
+
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
 
   final _formKey = GlobalKey<FormState>();
+
+  // ⭐ ADD CONTROLLERS ⭐
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
   @override
   void initState() {
@@ -32,6 +38,32 @@ class _LoginPageState extends State<LoginPage>
   void dispose() {
     _fadeController.dispose();
     super.dispose();
+  }
+
+  // ⭐ LOGIN HANDLER ⭐
+  Future<void> _handleLogin() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    try {
+      final user = await AuthService.instance.signIn(
+        email: email,
+        password: password,
+      );
+
+      if (user != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Login successful")),
+        );
+        Navigator.pushReplacementNamed(context, '/dashboard');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Login failed: $e")),
+      );
+    }
   }
 
   @override
@@ -65,7 +97,6 @@ class _LoginPageState extends State<LoginPage>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Cow Animation
                     Lottie.asset(
                       'assets/cow_animation.json',
                       height: 100,
@@ -95,6 +126,7 @@ class _LoginPageState extends State<LoginPage>
                       child: Column(
                         children: [
                           TextFormField(
+                            controller: _emailController, // ⭐ ADDED
                             decoration: InputDecoration(
                               labelText: "Email",
                               prefixIcon: const Icon(Icons.email_outlined),
@@ -109,6 +141,7 @@ class _LoginPageState extends State<LoginPage>
                           ),
                           const SizedBox(height: 16),
                           TextFormField(
+                            controller: _passwordController, // ⭐ ADDED
                             obscureText: true,
                             decoration: InputDecoration(
                               labelText: "Password",
@@ -141,16 +174,10 @@ class _LoginPageState extends State<LoginPage>
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
-                              onPressed: () {
-                                if (_formKey.currentState!.validate()) {
-                                  // ✅ Navigate to Dashboard after login
-                                  Navigator.pushReplacementNamed(
-                                      context, '/dashboard');
-                                }
-                              },
+                              // ⭐ UPDATED LOGIC ⭐
+                              onPressed: _handleLogin,
                               style: ElevatedButton.styleFrom(
-                                padding:
-                                const EdgeInsets.symmetric(vertical: 14),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
                                 backgroundColor: const Color(0xFF5D4037),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),

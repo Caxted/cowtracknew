@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 
+// ⭐ ADD THIS ⭐
+import '../../services/auth_service.dart';
+
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
 
@@ -32,6 +35,25 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
     _fadeController.dispose();
     _emailController.dispose();
     super.dispose();
+  }
+
+  // ⭐ RESET HANDLER ⭐
+  Future<void> _handleReset() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final email = _emailController.text.trim();
+
+    try {
+      await AuthService.instance.sendPasswordResetEmail(email: email);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Reset email sent — check spam if needed')),
+      );
+      Navigator.pop(context); // back to login
+    } on Exception catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to send reset link: $e')),
+      );
+    }
   }
 
   @override
@@ -112,11 +134,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
-                              onPressed: () {
-                                if (_formKey.currentState!.validate()) {
-                                  // Handle reset password
-                                }
-                              },
+                              // ⭐ UPDATED TO CALL RESET HANDLER ⭐
+                              onPressed: _handleReset,
                               style: ElevatedButton.styleFrom(
                                 padding:
                                 const EdgeInsets.symmetric(vertical: 14),

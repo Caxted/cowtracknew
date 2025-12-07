@@ -279,7 +279,7 @@ class _MilkInputOverlayWidgetState extends State<MilkInputOverlayWidget>
           Expanded(
             flex: 1,
             child: DropdownButtonFormField<String>(
-              value: _selectedUnit,
+              initialValue: _selectedUnit,
               decoration: InputDecoration(
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),

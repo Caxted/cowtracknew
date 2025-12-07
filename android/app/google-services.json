@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1012285886654",
+    "project_id": "cowtrack-dev",
+    "storage_bucket": "cowtrack-dev.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1012285886654:android:43bef15893a4ca9efd4eef",
+        "android_client_info": {
+          "package_name": "com.cowtrack.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDYK9WjIlhrIj1HARw4KDlxPEB8-vfRAwA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

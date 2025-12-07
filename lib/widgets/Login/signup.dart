@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 
+// ⭐ ADD THIS ⭐
+import '../../services/auth_service.dart';
+
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
 
@@ -14,6 +17,12 @@ class _SignupPageState extends State<SignupPage>
   late Animation<double> _fadeAnimation;
 
   final _formKey = GlobalKey<FormState>();
+
+  // ⭐ CONTROLLERS ADDED ⭐
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
 
   @override
   void initState() {
@@ -30,7 +39,51 @@ class _SignupPageState extends State<SignupPage>
   @override
   void dispose() {
     _fadeController.dispose();
+    // ⭐ DISPOSE CONTROLLERS ⭐
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  // ⭐ SIGNUP HANDLER ⭐
+  Future<void> _handleSignup() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    final confirmPassword = _confirmPasswordController.text.trim();
+
+    if (password != confirmPassword) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Passwords do not match")),
+      );
+      return;
+    }
+
+    try {
+      final user = await AuthService.instance.signUp(
+        email: email,
+        password: password,
+        displayName: name,
+        extraData: {
+          'role': 'farmer',
+        },
+      );
+
+      if (user != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Signup successful")),
+        );
+        Navigator.pushReplacementNamed(context, '/dashboard');
+      }
+    } on Exception catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Signup failed: $e")),
+      );
+    }
   }
 
   @override
@@ -94,6 +147,7 @@ class _SignupPageState extends State<SignupPage>
                       child: Column(
                         children: [
                           TextFormField(
+                            controller: _nameController, // ⭐ ADDED
                             decoration: InputDecoration(
                               labelText: "Name",
                               prefixIcon: const Icon(Icons.person_outline),
@@ -108,6 +162,7 @@ class _SignupPageState extends State<SignupPage>
                           ),
                           const SizedBox(height: 16),
                           TextFormField(
+                            controller: _emailController, // ⭐ ADDED
                             decoration: InputDecoration(
                               labelText: "Email",
                               prefixIcon: const Icon(Icons.email_outlined),
@@ -122,6 +177,7 @@ class _SignupPageState extends State<SignupPage>
                           ),
                           const SizedBox(height: 16),
                           TextFormField(
+                            controller: _passwordController, // ⭐ ADDED
                             obscureText: true,
                             decoration: InputDecoration(
                               labelText: "Password",
@@ -137,6 +193,7 @@ class _SignupPageState extends State<SignupPage>
                           ),
                           const SizedBox(height: 16),
                           TextFormField(
+                            controller: _confirmPasswordController, // ⭐ ADDED
                             obscureText: true,
                             decoration: InputDecoration(
                               labelText: "Confirm Password",
@@ -154,11 +211,8 @@ class _SignupPageState extends State<SignupPage>
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
-                              onPressed: () {
-                                if (_formKey.currentState!.validate()) {
-                                  // Handle signup
-                                }
-                              },
+                              // ⭐ UPDATED TO CALL SIGNUP HANDLER ⭐
+                              onPressed: _handleSignup,
                               style: ElevatedButton.styleFrom(
                                 padding:
                                 const EdgeInsets.symmetric(vertical: 14),

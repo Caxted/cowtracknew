@@ -176,7 +176,7 @@ class _QuantityPriceWidgetState extends State<QuantityPriceWidget> {
                           ),
                           SizedBox(height: 1.h),
                           DropdownButtonFormField<String>(
-                            value: widget.selectedUnit,
+                            initialValue: widget.selectedUnit,
                             decoration: InputDecoration(
                               contentPadding: EdgeInsets.symmetric(
                                 horizontal: 3.w,
@@ -278,7 +278,7 @@ class _QuantityPriceWidgetState extends State<QuantityPriceWidget> {
                           ),
                           SizedBox(height: 1.h),
                           DropdownButtonFormField<String>(
-                            value: widget.selectedCurrency,
+                            initialValue: widget.selectedCurrency,
                             decoration: InputDecoration(
                               contentPadding: EdgeInsets.symmetric(
                                 horizontal: 3.w,

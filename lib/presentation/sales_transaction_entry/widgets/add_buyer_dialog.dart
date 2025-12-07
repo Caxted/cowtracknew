@@ -238,7 +238,7 @@ class _AddBuyerDialogState extends State<AddBuyerDialog> {
                       ),
                       SizedBox(height: 1.h),
                       DropdownButtonFormField<String>(
-                        value: _selectedPaymentTerms,
+                        initialValue: _selectedPaymentTerms,
                         decoration: InputDecoration(
                           prefixIcon: Icon(
                             Icons.payment,
@@ -272,7 +272,7 @@ class _AddBuyerDialogState extends State<AddBuyerDialog> {
                       ),
                       SizedBox(height: 1.h),
                       DropdownButtonFormField<String>(
-                        value: _selectedUnit,
+                        initialValue: _selectedUnit,
                         decoration: InputDecoration(
                           prefixIcon: Icon(
                             Icons.straighten,
