@@ -165,7 +165,6 @@ class _CattlePageState extends State<CattlePage> {
 
     );
   }
-
   Widget _buildMetricRangeSelector() {
     return Padding(
       padding: const EdgeInsets.all(8.0),
