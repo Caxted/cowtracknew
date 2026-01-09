@@ -25,7 +25,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   bool _isLoading = false;
 
-  // 🔥 ORIGINAL DASHBOARD DATA (RESTORED)
   final Map<String, dynamic> _farmData = {
     "farmer": {
       "name": "John Anderson",
@@ -39,8 +38,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       "health_alerts": 2,
       "milk_production": "285L",
     },
-
-    // ✅ UPDATED PROMOTIONAL BANNERS (REAL SCHEME LINKS)
     "promotional_banners": [
       {
         "id": 1,
@@ -78,7 +75,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ],
   };
 
-  // 🔥 ORIGINAL SERVICE CARDS (RESTORED)
   late final List<Map<String, dynamic>> _serviceCards = [
     {
       "title": "Disease Detection",
@@ -107,8 +103,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       "icon": "local_hospital",
       "route": "/veterinarian-directory-screen",
     },
-
-    // ✅ FIXED ROUTE
     {
       "title": "Government Schemes",
       "icon": "description",
@@ -167,12 +161,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  /// ✅ FIXED PROFILE NAVIGATION
   void _onProfileTap() {
     HapticFeedback.lightImpact();
-    Navigator.pushNamed(context, '/profile-management-screen');
+    Navigator.pushNamed(context, AppRoutes.profile);
   }
 
-  // ✅ UPDATED: BANNER → WEBVIEW
   void _onPromotionalBannerTap(Map<String, dynamic> banner) {
     HapticFeedback.lightImpact();
     Navigator.pushNamed(
@@ -208,7 +202,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           onRefresh: _onRefresh,
           child: CustomScrollView(
             slivers: [
-              // Greeting Header
               SliverToBoxAdapter(
                 child: GreetingHeaderWidget(
                   farmerName: farmerData["name"],
@@ -219,7 +212,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
 
-              // Farm Statistics (UNCHANGED)
               SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 4.w),
@@ -260,7 +252,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
               SliverToBoxAdapter(child: SizedBox(height: 3.h)),
 
-              // 🔥 Promotional Banners (UNCHANGED UI)
               SliverToBoxAdapter(
                 child: SizedBox(
                   height: 15.h,
@@ -285,15 +276,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
               SliverToBoxAdapter(child: SizedBox(height: 3.h)),
 
-              // Service Cards Grid (UNCHANGED)
               SliverPadding(
                 padding: EdgeInsets.symmetric(horizontal: 4.w),
                 sliver: SliverGrid(
                   gridDelegate:
-                  SliverGridDelegateWithFixedCrossAxisCount(
+                  const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    crossAxisSpacing: 3.w,
-                    mainAxisSpacing: 3.w,
                   ),
                   delegate: SliverChildBuilderDelegate(
                         (context, index) {
@@ -317,8 +305,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ),
-
-      // FABs (UNCHANGED)
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -331,7 +317,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
-
       bottomNavigationBar:
       const CustomBottomBar(currentIndex: 0),
     );
