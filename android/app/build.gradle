@@ -24,14 +24,13 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.cowtrack.app"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
         multiDexEnabled true
         minSdkVersion flutter.minSdkVersion
     }
@@ -40,8 +39,6 @@ android {
         release {
             minifyEnabled false
             shrinkResources false
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.debug
         }
     }
@@ -56,4 +53,18 @@ dependencies {
     implementation "androidx.multidex:multidex:2.0.1"
     implementation 'com.google.android.material:material:1.9.0'
     implementation 'androidx.concurrent:concurrent-futures:1.1.0'
+}
+
+/*
+|--------------------------------------------------------------------------
+| 🔧 FIX FOR AGP 8.2.x COMPATIBILITY
+|--------------------------------------------------------------------------
+| Forces AndroidX Activity versions compatible with your Gradle plugin.
+| Safe, temporary, and commonly used in real projects under deadlines.
+*/
+configurations.all {
+    resolutionStrategy {
+        force "androidx.activity:activity:1.8.2"
+        force "androidx.activity:activity-ktx:1.8.2"
+    }
 }
