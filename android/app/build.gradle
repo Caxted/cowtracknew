@@ -24,7 +24,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.cowtrack.app"
+        applicationId = "com.shyam.cowtrack"
 
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion

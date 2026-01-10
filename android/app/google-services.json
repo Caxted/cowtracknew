@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "1012285886654",
-    "project_id": "cowtrack-dev",
-    "storage_bucket": "cowtrack-dev.firebasestorage.app"
+    "project_number": "26132516162",
+    "project_id": "cowtrack-shyam",
+    "storage_bucket": "cowtrack-shyam.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1012285886654:android:43bef15893a4ca9efd4eef",
+        "mobilesdk_app_id": "1:26132516162:android:dc4f1e183940d1e5ba4cdb",
         "android_client_info": {
-          "package_name": "com.cowtrack.app"
+          "package_name": "com.shyam.cowtrack"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDYK9WjIlhrIj1HARw4KDlxPEB8-vfRAwA"
+          "current_key": "AIzaSyBzQCVsCGamA1rlwT0Lrg7lqd7QhF3is7M"
         }
       ],
       "services": {

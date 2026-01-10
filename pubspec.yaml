@@ -15,22 +15,21 @@ dependencies:
   flutter_svg: ^2.0.9
   google_fonts: ^6.1.0
   shared_preferences: ^2.2.2
-  web: 0.5.1
 
   # Feature dependencies
   cached_network_image: ^3.3.1
   connectivity_plus: ^6.1.4
   dio: ^5.4.0
-  fl_chart: ^0.65.0
+  fl_chart: ^0.66.0
   flutter_slidable: ^4.0.1
   camera: ^0.10.5+5
   image_picker: ^1.0.4
   permission_handler: ^11.1.0
   path_provider: ^2.1.2
   universal_html: ^2.2.4
-  webview_flutter: ^4.4.1   # 👈 Added WebView support
+  webview_flutter: ^4.4.1
 
-  # Login project dependencies
+  # Firebase & state management
   cupertino_icons: ^1.0.8
   lottie: ^2.5.1
   firebase_core: ^2.27.0
@@ -39,8 +38,10 @@ dependencies:
   firebase_storage: ^11.6.9
   provider: ^6.1.5+1
 
-  http: any
+  # Utilities
+  http: ^1.2.1
   intl: ^0.20.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -108,7 +108,7 @@ class EmptyStateWidget extends StatelessWidget {
                       Text(
                         buttonText,
                         style:
-                            AppTheme.lightTheme.textTheme.titleMedium?.copyWith(
+                        AppTheme.lightTheme.textTheme.titleMedium?.copyWith(
                           color: AppTheme.lightTheme.colorScheme.onPrimary,
                           fontWeight: FontWeight.w600,
                         ),

@@ -50,19 +50,20 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDYK9WjIlhrIj1HARw4KDlxPEB8-vfRAwA',
-    appId: '1:1012285886654:android:43bef15893a4ca9efd4eef',
-    messagingSenderId: '1012285886654',
-    projectId: 'cowtrack-dev',
-    storageBucket: 'cowtrack-dev.firebasestorage.app',
+    apiKey: 'AIzaSyBzQCVsCGamA1rlwT0Lrg7lqd7QhF3is7M',
+    appId: '1:26132516162:android:dc4f1e183940d1e5ba4cdb',
+    messagingSenderId: '26132516162',
+    projectId: 'cowtrack-shyam',
+    storageBucket: 'cowtrack-shyam.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBSiHw2iOeHgAIALKpITT9wzExvZqZmZnk',
-    appId: '1:1012285886654:ios:3fa568b5ce9c5403fd4eef',
-    messagingSenderId: '1012285886654',
-    projectId: 'cowtrack-dev',
-    storageBucket: 'cowtrack-dev.firebasestorage.app',
+    apiKey: 'AIzaSyA2KuwQ0nojihE9e41a48mseKEAX5q58xs',
+    appId: '1:26132516162:ios:cfb7d2c41588cea8ba4cdb',
+    messagingSenderId: '26132516162',
+    projectId: 'cowtrack-shyam',
+    storageBucket: 'cowtrack-shyam.firebasestorage.app',
     iosBundleId: 'com.cowtrack.app.testProject',
   );
+
 }
