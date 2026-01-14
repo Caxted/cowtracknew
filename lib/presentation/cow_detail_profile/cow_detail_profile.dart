@@ -2,19 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
+
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_bottom_bar.dart';
-
 import '../../models/cattle.dart';
-
 import '../cattle/widgets/metric_charts.dart';
-
-import './widgets/cow_photo_gallery_widget.dart';
-import './widgets/cow_stats_card_widget.dart';
-import './widgets/floating_action_menu_widget.dart';
-import './widgets/health_records_tab_widget.dart';
-import './widgets/profile_tab_widget.dart';
-import './widgets/add_milk_dialog.dart';
+import 'widgets/cow_photo_gallery_widget.dart';
+import 'widgets/cow_stats_card_widget.dart';
+import 'widgets/floating_action_menu_widget.dart';
+import 'widgets/health_records_tab_widget.dart';
+import 'widgets/profile_tab_widget.dart';
+import 'widgets/add_milk_dialog.dart';
 
 class CowDetailProfile extends StatefulWidget {
   final Cattle cattle;
@@ -25,14 +24,15 @@ class CowDetailProfile extends StatefulWidget {
   State<CowDetailProfile> createState() => _CowDetailProfileState();
 }
 
-class _CowDetailProfileState extends State<CowDetailProfile>
-    with TickerProviderStateMixin {
+class _CowDetailProfileState extends State<CowDetailProfile> with TickerProviderStateMixin {
   late TabController _tabController;
   int _currentBottomNavIndex = 1;
 
   double todayMilk = 0;
   double monthlyMilk = 0;
   bool _loadingMilk = false;
+  List<Map<String, dynamic>> recentLogs = [];
+  bool isBarChart = true;
 
   @override
   void initState() {
@@ -41,7 +41,6 @@ class _CowDetailProfileState extends State<CowDetailProfile>
     _loadMilkStats();
   }
 
-  /// 🔹 Fetch real milk stats from Firebase (cow-wise)
   Future<void> _loadMilkStats() async {
     setState(() => _loadingMilk = true);
 
@@ -55,16 +54,20 @@ class _CowDetailProfileState extends State<CowDetailProfile>
     final snapshot = await FirebaseFirestore.instance
         .collection('milk_logs')
         .where('ownerId', isEqualTo: user.uid)
-        .where('cattleId', isEqualTo: widget.cattle.id)
+        .where('cowId', isEqualTo: widget.cattle.id)
+        .orderBy('date', descending: true)
         .get();
 
     double today = 0;
     double month = 0;
+    List<Map<String, dynamic>> logs = [];
 
     for (var doc in snapshot.docs) {
       final data = doc.data();
       final date = (data['date'] as Timestamp).toDate();
       final qty = (data['quantity'] as num).toDouble();
+
+      logs.add({'date': date, 'quantity': qty});
 
       if (date.isAfter(startOfDay)) {
         today += qty;
@@ -78,6 +81,7 @@ class _CowDetailProfileState extends State<CowDetailProfile>
       setState(() {
         todayMilk = today;
         monthlyMilk = month;
+        recentLogs = logs;
         _loadingMilk = false;
       });
     }
@@ -87,13 +91,11 @@ class _CowDetailProfileState extends State<CowDetailProfile>
     await _loadMilkStats();
   }
 
-  /// 🔹 Add milk entry
   void _handleLogMilkProduction() async {
     final result = await showDialog(
       context: context,
       builder: (_) => AddMilkDialog(cattleId: widget.cattle.id),
     );
-
     if (result == true) {
       _loadMilkStats();
     }
@@ -104,9 +106,7 @@ class _CowDetailProfileState extends State<CowDetailProfile>
     final cattle = widget.cattle;
 
     return Scaffold(
-      appBar: CustomAppBar(
-        title: cattle.name,
-      ),
+      appBar: CustomAppBar(title: cattle.name),
       body: RefreshIndicator(
         onRefresh: _handleRefresh,
         child: Column(
@@ -115,17 +115,13 @@ class _CowDetailProfileState extends State<CowDetailProfile>
               photos: cattle.photoUrl != null ? [cattle.photoUrl!] : [],
               cowName: cattle.name,
             ),
-
             CowStatsCardWidget(
               cowData: {
                 "breed": cattle.breed,
-                "age": cattle.dob != null
-                    ? DateTime.now().year - cattle.dob!.year
-                    : '-',
+                "age": cattle.dob != null ? DateTime.now().year - cattle.dob!.year : '-',
                 "weight": "-",
               },
             ),
-
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
               child: TabBar(
@@ -137,7 +133,6 @@ class _CowDetailProfileState extends State<CowDetailProfile>
                 ],
               ),
             ),
-
             Expanded(
               child: TabBarView(
                 controller: _tabController,
@@ -152,11 +147,9 @@ class _CowDetailProfileState extends State<CowDetailProfile>
                   ),
 
                   /// HEALTH TAB
-                  const HealthRecordsTabWidget(
-                    healthRecords: [],
-                  ),
+                  const HealthRecordsTabWidget(healthRecords: []),
 
-                  /// 🔥 MILK STATS TAB (REAL DATA + CHARTS)
+                  /// MILK STATS TAB
                   _loadingMilk
                       ? const Center(child: CircularProgressIndicator())
                       : SingleChildScrollView(
@@ -164,45 +157,66 @@ class _CowDetailProfileState extends State<CowDetailProfile>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Today: ${todayMilk.toStringAsFixed(1)} L',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium,
-                        ),
+                        Text('Today: ${todayMilk.toStringAsFixed(1)} L',
+                            style: Theme.of(context).textTheme.titleMedium),
                         SizedBox(height: 8),
-                        Text(
-                          'This Month: ${monthlyMilk.toStringAsFixed(1)} L',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium,
-                        ),
-                        SizedBox(height: 24),
+                        Text('This Month: ${monthlyMilk.toStringAsFixed(1)} L',
+                            style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 20),
 
-                        const Text(
-                          'Weekly Milk Production',
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                        /// Toggle for Chart View
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Last 7 Days Milk Production',
+                                style: TextStyle(fontWeight: FontWeight.bold)),
+                            ToggleButtons(
+                              isSelected: [isBarChart, !isBarChart],
+                              onPressed: (index) {
+                                setState(() => isBarChart = index == 0);
+                              },
+                              borderRadius: BorderRadius.circular(8),
+                              constraints: BoxConstraints(minWidth: 50, minHeight: 36),
+                              children: const [
+                                Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 12),
+                                  child: Text("Bar"),
+                                ),
+                                Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 12),
+                                  child: Text("Line"),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
+                        const SizedBox(height: 10),
                         SizedBox(
                           height: 220,
                           child: MetricCharts(
                             isMonthly: false,
+                            isBarChart: isBarChart,
                             cattleId: cattle.id,
                           ),
                         ),
+                        const SizedBox(height: 20),
 
-                        const Divider(),
-
-                        const Text(
-                          'Monthly Milk Production',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        SizedBox(
-                          height: 220,
-                          child: MetricCharts(
-                            isMonthly: true,
-                            cattleId: cattle.id,
-                          ),
+                        /// Recent Entries List
+                        const Text('Recent Entries',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: recentLogs.length,
+                          separatorBuilder: (_, __) => const Divider(),
+                          itemBuilder: (context, index) {
+                            final log = recentLogs[index];
+                            return ListTile(
+                              leading: const Icon(Icons.date_range),
+                              title: Text(DateFormat.yMMMd().format(log['date'])),
+                              trailing: Text('${log['quantity']} L'),
+                            );
+                          },
                         ),
                       ],
                     ),

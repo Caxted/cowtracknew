@@ -6,6 +6,13 @@ import 'package:cowtrack/models/daily_metric.dart';
 import 'package:cowtrack/services/cattle_service.dart';
 import 'widgets/metric_charts.dart';
 
+// 👉 Add imports for milk log
+import 'package:cowtrack/presentation/milk_log/screens/add_milk_log_screen.dart';
+import 'package:cowtrack/presentation/milk_log/screens/cow_milk_analytics_screen.dart';
+
+// ... Your existing imports
+import 'package:fl_chart/fl_chart.dart';
+
 class CattlePage extends StatefulWidget {
   final String cattleName;
   final String cattleId;
@@ -22,101 +29,39 @@ class CattlePage extends StatefulWidget {
 
 class _CattlePageState extends State<CattlePage> {
   final CattleService _cattleService = CattleService();
-  int _selectedMetricRange = 30;
+  int _selectedMetricRange = 7;
 
-  /// 🔹 BLE / simulated belt data
-  Future<void> onBeltDataReceived(Map<String, dynamic> payload) async {
-    final metric = DailyMetric(
-      date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
-      temperatureAvg:
-      (payload['temperatureAvg'] as num?)?.toDouble() ?? 0.0,
-      temperatureMax:
-      (payload['temperatureMax'] as num?)?.toDouble() ?? 0.0,
-      temperatureMin:
-      (payload['temperatureMin'] as num?)?.toDouble() ?? 0.0,
-      steps: (payload['steps'] as num?)?.toInt() ?? 0,
-      milk: (payload['milk'] as num?)?.toDouble() ?? 0.0,
-      updatedAt: Timestamp.now(),
-    );
-
-    await _cattleService.saveDailyMetric(widget.cattleId, metric);
-  }
-
-  void _simulateSync() {
-    onBeltDataReceived({
-      'temperatureAvg': 38.4,
-      'temperatureMax': 39.2,
-      'temperatureMin': 37.6,
-      'steps': 5200,
-      'milk': 14.8,
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Simulated sync complete')),
-    );
-  }
-
-  Future<void> seedDemoMetrics(int days) async {
-    final now = DateTime.now();
-
-    for (int i = 0; i < days; i++) {
-      final date = now.subtract(Duration(days: i));
-      final metric = DailyMetric(
-        date: DateFormat('yyyy-MM-dd').format(date),
-        temperatureAvg: 38.0 + (i % 3) * 0.3,
-        temperatureMax: 39.0,
-        temperatureMin: 37.4,
-        steps: 3000 + (i * 150),
-        milk: 10 + (i % 4),
-        updatedAt: Timestamp.now(),
-      );
-
-      await _cattleService.saveDailyMetric(widget.cattleId, metric);
-    }
-  }
+  DateTimeRange? _customRange;
+  bool _isBarChart = true;
 
   @override
   Widget build(BuildContext context) {
+    final startDate = _customRange?.start ?? DateTime.now().subtract(Duration(days: _selectedMetricRange));
+    final endDate = _customRange?.end ?? DateTime.now();
+
     return Scaffold(
       appBar: AppBar(title: Text(widget.cattleName)),
       body: SingleChildScrollView(
         child: Column(
           children: [
+            _buildActionButtons(),
             _buildMetricRangeSelector(),
-
             StreamBuilder<List<DailyMetric>>(
               stream: _cattleService.streamDailyMetrics(
                 widget.cattleId,
                 days: _selectedMetricRange,
               ),
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Padding(
-                    padding: EdgeInsets.all(24),
-                    child: CircularProgressIndicator(),
-                  );
-                }
-
-                if (snapshot.hasError) {
-                  return Text('Error: ${snapshot.error}');
-                }
-
                 final metrics = snapshot.data ?? [];
 
                 return Column(
                   children: [
-                    _buildLatestSnapshotCard(
-                        metrics.isNotEmpty ? metrics.first : null),
+                    _buildLatestSnapshotCard(metrics.isNotEmpty ? metrics.first : null),
                     const SizedBox(height: 16),
-                    MetricCharts(
-                      cattleId: widget.cattleId,
-                      isMonthly: false,
-                    ),
-                    const SizedBox(height: 24),
-                    MetricCharts(
-                      cattleId: widget.cattleId,
-                      isMonthly: true,
-                    ),
+                    _buildMilkEntriesList(metrics),
+                    const SizedBox(height: 16),
+                    _buildAnalyticsSection(metrics),
+                    const SizedBox(height: 16),
                     _buildVaccinationCard(),
                   ],
                 );
@@ -125,33 +70,147 @@ class _CattlePageState extends State<CattlePage> {
           ],
         ),
       ),
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          FloatingActionButton.small(
-            heroTag: 'seed',
-            onPressed: () async {
-              await seedDemoMetrics(7);
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Demo metrics seeded')),
+    );
+  }
+
+  /// ================= UI SECTIONS =================
+
+  Widget _buildMilkEntriesList(List<DailyMetric> metrics) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Text("Milk Entries", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        ),
+        ...metrics.map((m) => ListTile(
+          title: Text("${m.date}"),
+          trailing: Text("${m.milk.toStringAsFixed(1)} L"),
+        )),
+      ],
+    );
+  }
+
+  Widget _buildAnalyticsSection(List<DailyMetric> metrics) {
+    if (metrics.isEmpty) return const SizedBox();
+
+    final spots = metrics.asMap().entries.map((entry) {
+      return FlSpot(entry.key.toDouble(), entry.value.milk);
+    }).toList();
+
+    final labels = metrics.map((m) => m.date.substring(5)).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Text("Milk Analytics", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            TextButton.icon(
+              icon: const Icon(Icons.calendar_today, size: 18),
+              label: const Text("Pick Date Range"),
+              onPressed: () async {
+                final picked = await showDateRangePicker(
+                  context: context,
+                  firstDate: DateTime(2023),
+                  lastDate: DateTime.now(),
                 );
-              }
-            },
-            child: const Icon(Icons.auto_graph),
+                if (picked != null) {
+                  setState(() => _customRange = picked);
+                }
+              },
+            ),
+            IconButton(
+              icon: Icon(_isBarChart ? Icons.show_chart : Icons.bar_chart),
+              onPressed: () => setState(() => _isBarChart = !_isBarChart),
+            ),
+          ],
+        ),
+        SizedBox(
+          height: 240,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _isBarChart
+                ? BarChart(
+              BarChartData(
+                barGroups: spots.map((e) {
+                  return BarChartGroupData(
+                    x: e.x.toInt(),
+                    barRods: [BarChartRodData(toY: e.y, width: 16)],
+                  );
+                }).toList(),
+                titlesData: FlTitlesData(
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        final i = value.toInt();
+                        return Text(i >= 0 && i < labels.length ? labels[i] : '');
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            )
+                : LineChart(
+              LineChartData(
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: spots,
+                    isCurved: true,
+                    barWidth: 3,
+                    dotData: FlDotData(show: true),
+                  ),
+                ],
+                titlesData: FlTitlesData(
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        final i = value.toInt();
+                        return Text(i >= 0 && i < labels.length ? labels[i] : '');
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
-          const SizedBox(height: 8),
-          FloatingActionButton(
-            heroTag: 'sync',
-            onPressed: _simulateSync,
-            child: const Icon(Icons.sync),
+        ),
+      ],
+    );
+  }
+
+  /// ========== Other unchanged widgets ==========
+
+  Widget _buildActionButtons() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          ElevatedButton.icon(
+            icon: const Icon(Icons.local_drink),
+            label: const Text('Add Milk Log'),
+            onPressed: () {
+              // Navigate to add milk screen
+            },
+          ),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.analytics),
+            label: const Text('Analytics'),
+            onPressed: () {
+              // Navigate to full analytics if needed
+            },
           ),
         ],
       ),
     );
   }
-
-  /// ================= UI HELPERS =================
 
   Widget _buildMetricRangeSelector() {
     return Padding(

@@ -13,6 +13,7 @@ import './widgets/stats_card_widget.dart';
 
 import 'package:cowtrack/widgets/chatbot/cow_chatbot.dart';
 import 'package:cowtrack/presentation/dashboard_home/vet_screen.dart';
+import 'package:cowtrack/presentation/farm_analytics/screens/farm_analytics_screen.dart'; // ✅ ADDED
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -29,7 +30,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _totalCattle = 0;
   double _todayMilk = 0.0;
 
-  /// 🔹 Service buttons (RESTORED)
   final List<Map<String, dynamic>> _serviceCards = [
     {
       "title": "Disease Detection",
@@ -70,31 +70,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
     {
       "title": "Farm Analytics",
       "icon": "analytics",
-      "route": "/dashboard-screen",
+      "route": "/dashboard-screen", // This is handled specially below
     },
   ];
 
-  /// 🔹 Promotional banners (RESTORED)
   final List<Map<String, dynamic>> _promotionalBanners = [
     {
       "title": "Rashtriya Gokul Mission",
-      "subtitle":
-      "Development & conservation of indigenous cattle breeds",
+      "subtitle": "Development & conservation of indigenous cattle breeds",
       "button_text": "Learn More",
-      "image":
-      "https://images.pexels.com/photos/422218/pexels-photo-422218.jpeg",
-      "url":
-      "https://dahd.nic.in/schemes/rashtriya-gokul-mission",
+      "image": "https://images.pexels.com/photos/422218/pexels-photo-422218.jpeg",
+      "url": "https://dahd.nic.in/schemes/rashtriya-gokul-mission",
     },
     {
       "title": "National Livestock Mission",
-      "subtitle":
-      "Boost productivity & entrepreneurship in livestock sector",
+      "subtitle": "Boost productivity & entrepreneurship in livestock sector",
       "button_text": "View Scheme",
-      "image":
-      "https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg",
-      "url":
-      "https://dahd.nic.in/schemes/national-livestock-mission",
+      "image": "https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg",
+      "url": "https://dahd.nic.in/schemes/national-livestock-mission",
     },
   ];
 
@@ -105,20 +98,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _loadDashboardData();
   }
 
-  /// 🔹 Ensure user document exists
   Future<void> _ensureUserDocument() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    final ref =
-    FirebaseFirestore.instance.collection('users').doc(user.uid);
+    final ref = FirebaseFirestore.instance.collection('users').doc(user.uid);
 
     if (!(await ref.get()).exists) {
       await ref.set({'createdAt': FieldValue.serverTimestamp()});
     }
   }
 
-  /// 🔹 Load stats
   Future<void> _loadDashboardData() async {
     setState(() => _isLoading = true);
 
@@ -135,17 +125,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           .get();
 
       final now = DateTime.now();
-      final startOfDay =
-      DateTime(now.year, now.month, now.day);
+      final startOfDay = DateTime(now.year, now.month, now.day);
 
       final milkSnap = await FirebaseFirestore.instance
           .collection('milk_logs')
           .where('ownerId', isEqualTo: user.uid)
-          .where(
-        'date',
-        isGreaterThanOrEqualTo:
-        Timestamp.fromDate(startOfDay),
-      )
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
           .get();
 
       double milk = 0;
@@ -177,7 +162,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         context,
         MaterialPageRoute(builder: (_) => const VetScreen()),
       );
-    } else if (route != '/dashboard-screen') {
+    } else if (route == '/dashboard-screen') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const FarmAnalyticsScreen()),
+      );
+    } else {
       Navigator.pushNamed(context, route);
     }
   }
@@ -209,48 +199,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       notificationCount: 0,
                       onNotificationTap: () {},
                       onProfileTap: () {
-                        Navigator.pushNamed(
-                            context, AppRoutes.profile);
+                        Navigator.pushNamed(context, AppRoutes.profile);
                       },
                     ),
                   ),
-
-                  /// 🔹 Farm Overview
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding:
-                      EdgeInsets.symmetric(horizontal: 4.w),
+                      padding: EdgeInsets.symmetric(horizontal: 4.w),
                       child: Column(
-                        crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Farm Overview',
-                              style:
-                              theme.textTheme.titleLarge),
+                          Text('Farm Overview', style: theme.textTheme.titleLarge),
                           SizedBox(height: 2.h),
                           Row(
                             children: [
                               Expanded(
                                 child: StatsCardWidget(
                                   title: 'Total Cattle',
-                                  value:
-                                  _totalCattle.toString(),
+                                  value: _totalCattle.toString(),
                                   iconName: 'pets',
-                                  valueColor:
-                                  theme.primaryColor,
+                                  valueColor: theme.primaryColor,
                                 ),
                               ),
                               SizedBox(width: 3.w),
                               Expanded(
                                 child: StatsCardWidget(
                                   title: 'Milk Production',
-                                  value:
-                                  '${_todayMilk.toStringAsFixed(1)} L',
-                                  iconName:
-                                  'local_drink',
-                                  valueColor:
-                                  AppTheme.getSuccessColor(
-                                      !isDark),
+                                  value: '${_todayMilk.toStringAsFixed(1)} L',
+                                  iconName: 'local_drink',
+                                  valueColor: AppTheme.getSuccessColor(!isDark),
                                   subtitle: 'Today',
                                 ),
                               ),
@@ -260,40 +237,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                   ),
-
-                  /// 🔹 Banners
                   SliverToBoxAdapter(
                     child: SizedBox(
                       height: 15.h,
                       child: ListView.builder(
-                        scrollDirection:
-                        Axis.horizontal,
-                        padding:
-                        EdgeInsets.only(left: 4.w),
-                        itemCount:
-                        _promotionalBanners.length,
-                        itemBuilder:
-                            (context, index) {
-                          final banner =
-                          _promotionalBanners[index];
-                          return promo
-                              .PromotionalBannerWidget(
+                        scrollDirection: Axis.horizontal,
+                        padding: EdgeInsets.only(left: 4.w),
+                        itemCount: _promotionalBanners.length,
+                        itemBuilder: (context, index) {
+                          final banner = _promotionalBanners[index];
+                          return promo.PromotionalBannerWidget(
                             title: banner['title'],
-                            subtitle:
-                            banner['subtitle'],
-                            buttonText:
-                            banner['button_text'],
-                            imageUrl:
-                            banner['image'],
+                            subtitle: banner['subtitle'],
+                            buttonText: banner['button_text'],
+                            imageUrl: banner['image'],
                             onTap: () {
                               Navigator.pushNamed(
                                 context,
                                 AppRoutes.schemeWebView,
                                 arguments: {
-                                  'title':
-                                  banner['title'],
-                                  'url':
-                                  banner['url'],
+                                  'title': banner['title'],
+                                  'url': banner['url'],
                                 },
                               );
                             },
@@ -302,53 +266,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                   ),
-
                   SliverPadding(
-                    padding:
-                    EdgeInsets.symmetric(horizontal: 4.w),
+                    padding: EdgeInsets.symmetric(horizontal: 4.w),
                     sliver: SliverGrid(
-                      gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
                         mainAxisSpacing: 12,
                         crossAxisSpacing: 12,
                         childAspectRatio: 1.1,
                       ),
-                      delegate:
-                      SliverChildBuilderDelegate(
+                      delegate: SliverChildBuilderDelegate(
                             (context, index) {
-                          final item =
-                          _serviceCards[index];
-                          return service
-                              .ServiceCardWidget(
+                          final item = _serviceCards[index];
+                          return service.ServiceCardWidget(
                             title: item['title'],
                             iconName: item['icon'],
-                            showBadge:
-                            item['badge'] != null,
-                            badgeText:
-                            item['badge'],
-                            onTap: () =>
-                                _onServiceCardTap(
-                                    item['route']),
+                            showBadge: item['badge'] != null,
+                            badgeText: item['badge'],
+                            onTap: () => _onServiceCardTap(item['route']),
                           );
                         },
-                        childCount:
-                        _serviceCards.length,
+                        childCount: _serviceCards.length,
                       ),
                     ),
                   ),
-
-                  SliverToBoxAdapter(
-                      child: SizedBox(height: 10.h)),
+                  SliverToBoxAdapter(child: SizedBox(height: 10.h)),
                 ],
               ),
-
               if (_isLoading)
                 const Positioned.fill(
                   child: IgnorePointer(
-                    child: Center(
-                        child:
-                        CircularProgressIndicator()),
+                    child: Center(child: CircularProgressIndicator()),
                   ),
                 ),
             ],
@@ -367,8 +315,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
-      bottomNavigationBar:
-      const CustomBottomBar(currentIndex: 0),
+      bottomNavigationBar: const CustomBottomBar(currentIndex: 0),
     );
   }
 }
