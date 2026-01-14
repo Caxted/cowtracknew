@@ -1,89 +1,72 @@
-// lib/services/cattle_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cowtrack/models/cattle.dart';
-import 'package:cowtrack/models/daily_metric.dart';
+import '../models/cattle.dart';
+import '../models/daily_metric.dart';
 
 class CattleService {
-  final CollectionReference _cattleCol = FirebaseFirestore.instance.collection('cattle');
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// Streams all cattle documents for an ownerId (ownerId stored in doc)
+  CollectionReference get _cattleRef =>
+      _firestore.collection('cattle');
+
+  /// ===================== CATTLE =====================
+
   Stream<List<Cattle>> streamAllCattleForOwner(String ownerId) {
-    return _cattleCol
+    return _cattleRef
         .where('ownerId', isEqualTo: ownerId)
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snap) => snap.docs.map((d) => Cattle.fromMap(d.id, d.data() as Map<String, dynamic>)).toList());
+        .map((snap) =>
+        snap.docs.map((d) => Cattle.fromFirestore(d)).toList());
   }
 
-  /// Creates a cattle document and returns the generated doc id
-  Future<String> createCattleAndReturnId(Map<String, dynamic> data) async {
-    final docRef = _cattleCol.doc();
-    final payload = Map<String, dynamic>.from(data);
-    payload['createdAt'] = FieldValue.serverTimestamp();
-    await docRef.set(payload);
-    return docRef.id;
+  Future<String> createCattleAndReturnId(
+      Map<String, dynamic> data) async {
+    data['createdAt'] = FieldValue.serverTimestamp();
+    data['updatedAt'] = FieldValue.serverTimestamp();
+    final doc = await _cattleRef.add(data);
+    return doc.id;
   }
 
-  /// Create cattle using add (if you used elsewhere)
-  Future<void> createCattle(Map<String, dynamic> data) async {
-    final payload = Map<String, dynamic>.from(data);
-    payload['createdAt'] = FieldValue.serverTimestamp();
-    await _cattleCol.add(payload);
+  Future<void> updateCattle(
+      String cattleId, Map<String, dynamic> data) async {
+    data['updatedAt'] = FieldValue.serverTimestamp();
+    await _cattleRef.doc(cattleId).update(data);
   }
 
-  /// Update cattle fields
-  Future<void> updateCattle(String id, Map<String, dynamic> data) async {
-    final payload = Map<String, dynamic>.from(data);
-    payload['updatedAt'] = FieldValue.serverTimestamp();
-    await _cattleCol.doc(id).update(payload);
+  Future<void> deleteCattle(String cattleId) async {
+    await _cattleRef.doc(cattleId).delete();
   }
 
-  /// Delete cattle document
-  Future<void> deleteCattle(String id) async {
-    await _cattleCol.doc(id).delete();
+  /// ===================== DAILY METRICS =====================
+
+  CollectionReference _metricRef(String cattleId) =>
+      _cattleRef.doc(cattleId).collection('dailyMetrics');
+
+  /// ➕ Save / update daily metric (one per date)
+  Future<void> saveDailyMetric(
+      String cattleId, DailyMetric metric) async {
+    await _metricRef(cattleId)
+        .doc(metric.date)
+        .set(metric.toMap(), SetOptions(merge: true));
   }
 
-  /// Optional helper: fetch single cattle by id
-  Future<Cattle?> getCattleById(String id) async {
-    final snap = await _cattleCol.doc(id).get();
-    if (!snap.exists) return null;
-    return Cattle.fromMap(snap.id, snap.data() as Map<String, dynamic>);
-  }
+  /// 🔄 Stream metrics (latest first)
+  Stream<List<DailyMetric>> streamDailyMetrics(
+      String cattleId, {
+        int days = 30,
+      }) {
+    final fromDate = DateTime.now().subtract(Duration(days: days));
 
-  // ------------------------
-  // Daily metric helpers
-  // ------------------------
-
-  /// Save or update a daily metric using a DailyMetric object.
-  /// Saves under: cattle/{cattleId}/daily_metrics/{metric.date}
-  Future<void> saveDailyMetric(String cattleId, DailyMetric metric) async {
-    final col = _cattleCol.doc(cattleId).collection('daily_metrics');
-
-    // Use the metric.date (expected format yyyy-MM-dd) as the document id
-    final docRef = col.doc(metric.date);
-
-    // Convert metric to a map and set updatedAt to server timestamp for consistency
-    final payload = Map<String, dynamic>.from(metric.toMap());
-    payload['updatedAt'] = FieldValue.serverTimestamp();
-
-    // Merge to avoid overwriting unrelated fields
-    await docRef.set(payload, SetOptions(merge: true));
-  }
-
-  /// Stream daily metrics for a cattle ordered oldest -> newest (ascending).
-  /// If `days` provided, limits to last N docs (newest N) and returns them ascending.
-  Stream<List<DailyMetric>> streamDailyMetrics(String cattleId, {int? days}) {
-    Query q = _cattleCol.doc(cattleId).collection('daily_metrics').orderBy('updatedAt', descending: true);
-
-    if (days != null && days > 0) {
-      q = q.limit(days);
-    }
-
-    return q.snapshots().map((snap) {
-      final list = snap.docs.map((d) => DailyMetric.fromDoc(d)).toList();
-      // Reverse newest->oldest to oldest->newest for charts
-      final asc = list.reversed.toList();
-      return asc;
-    });
+    return _metricRef(cattleId)
+        .where(
+      'updatedAt',
+      isGreaterThanOrEqualTo: Timestamp.fromDate(fromDate),
+    )
+        .orderBy('updatedAt', descending: true)
+        .snapshots()
+        .map(
+          (snap) =>
+          snap.docs.map((d) => DailyMetric.fromFirestore(d)).toList(),
+    );
   }
 }

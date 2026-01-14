@@ -9,7 +9,7 @@ class Cattle {
   final DateTime? dob;
   final String? photoUrl;
   final String? ownerId;
-  final double lastMilk; // keep as double for consistency
+  final double lastMilk;
   final String status;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -44,11 +44,19 @@ class Cattle {
       dob: _fromTs(map['dob']),
       photoUrl: map['photoUrl'] as String?,
       ownerId: map['ownerId'] as String?,
-      lastMilk: (map['lastMilk'] is num) ? (map['lastMilk'] as num).toDouble() : 0.0,
+      lastMilk: (map['lastMilk'] is num)
+          ? (map['lastMilk'] as num).toDouble()
+          : 0.0,
       status: (map['status'] ?? 'healthy') as String,
       createdAt: _fromTs(map['createdAt']),
       updatedAt: _fromTs(map['updatedAt']),
     );
+  }
+
+  /// ✅ ADD THIS
+  factory Cattle.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return Cattle.fromMap(doc.id, data);
   }
 
   Map<String, dynamic> toMap() {
@@ -61,8 +69,10 @@ class Cattle {
       'ownerId': ownerId,
       'lastMilk': lastMilk,
       'status': status,
-      'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : null,
-      'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
+      'createdAt':
+      createdAt != null ? Timestamp.fromDate(createdAt!) : null,
+      'updatedAt':
+      updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
     }..removeWhere((key, value) => value == null);
   }
 }

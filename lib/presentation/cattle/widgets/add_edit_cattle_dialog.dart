@@ -1,11 +1,7 @@
-// lib/presentation/cattle/widgets/add_edit_cattle_dialog.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:cowtrack/models/cattle.dart';
 
@@ -28,7 +24,7 @@ class _AddEditCattleDialogState extends State<AddEditCattleDialog> {
   DateTime? _dob;
   File? _photoFile;
   String? _photoUrl;
-  bool _isSaving = false;
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -74,49 +70,31 @@ class _AddEditCattleDialogState extends State<AddEditCattleDialog> {
     if (selected != null) setState(() => _dob = selected);
   }
 
-  /// 🔹 SAVE TO FIRESTORE (ADD / EDIT)
-  Future<void> _onSavePressed() async {
+  /// ✅ ONLY COLLECT DATA & RETURN TO PARENT
+  void _onSavePressed() {
     if (!_formKey.currentState!.validate()) return;
 
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    setState(() => _isSubmitting = true);
 
-    setState(() => _isSaving = true);
+    final cattle = Cattle(
+      id: widget.existing?.id ?? '',
+      name: _nameCtl.text.trim(),
+      tagId: _tagCtl.text.trim(),
+      breed: _breedCtl.text.trim(),
+      dob: _dob,
+      photoUrl: _photoUrl,
+      ownerId: widget.existing?.ownerId,
+      lastMilk: widget.existing?.lastMilk ?? 0.0,
+      status: widget.existing?.status ?? 'healthy',
+      createdAt: widget.existing?.createdAt,
+      updatedAt: DateTime.now(),
+    );
 
-    final data = {
-      'ownerId': user.uid,
-      'name': _nameCtl.text.trim(),
-      'tagId': _tagCtl.text.trim(),
-      'breed': _breedCtl.text.trim(),
-      'dob': _dob != null ? Timestamp.fromDate(_dob!) : null,
-      'status': widget.existing?.status ?? 'healthy',
-      'lastMilk': widget.existing?.lastMilk ?? 0,
-      'photoUrl': _photoUrl,
-      'updatedAt': FieldValue.serverTimestamp(),
-    };
-
-    final cattleRef = FirebaseFirestore.instance.collection('cattle');
-
-    try {
-      if (widget.existing == null) {
-        // 🔹 CREATE
-        await cattleRef.add({
-          ...data,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-      } else {
-        // 🔹 UPDATE
-        await cattleRef.doc(widget.existing!.id).update(data);
-      }
-
-      Navigator.of(context).pop(true); // success flag
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save cattle')),
-      );
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
-    }
+    Navigator.of(context).pop({
+      'create': widget.existing == null,
+      'cattle': cattle,
+      'photo': _photoFile,
+    });
   }
 
   @override
@@ -146,14 +124,16 @@ class _AddEditCattleDialogState extends State<AddEditCattleDialog> {
             const SizedBox(height: 6),
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               TextButton.icon(
-                  onPressed: _pickFromGallery,
-                  icon: const Icon(Icons.photo_library),
-                  label: const Text('Gallery')),
+                onPressed: _pickFromGallery,
+                icon: const Icon(Icons.photo_library),
+                label: const Text('Gallery'),
+              ),
               const SizedBox(width: 8),
               TextButton.icon(
-                  onPressed: _takePhoto,
-                  icon: const Icon(Icons.camera_alt),
-                  label: const Text('Camera')),
+                onPressed: _takePhoto,
+                icon: const Icon(Icons.camera_alt),
+                label: const Text('Camera'),
+              ),
             ]),
             const SizedBox(height: 8),
             TextFormField(
@@ -163,32 +143,42 @@ class _AddEditCattleDialogState extends State<AddEditCattleDialog> {
               (v == null || v.trim().isEmpty) ? 'Required' : null,
             ),
             TextFormField(
-                controller: _tagCtl,
-                decoration: const InputDecoration(labelText: 'Tag ID')),
+              controller: _tagCtl,
+              decoration: const InputDecoration(labelText: 'Tag ID'),
+            ),
             TextFormField(
-                controller: _breedCtl,
-                decoration: const InputDecoration(labelText: 'Breed')),
+              controller: _breedCtl,
+              decoration: const InputDecoration(labelText: 'Breed'),
+            ),
             const SizedBox(height: 8),
             Row(children: [
               Expanded(
-                  child: Text(_dob == null
-                      ? 'DOB not set'
-                      : DateFormat.yMMMd().format(_dob!))),
-              TextButton(onPressed: _pickDob, child: const Text('Select DOB'))
+                child: Text(_dob == null
+                    ? 'DOB not set'
+                    : DateFormat.yMMMd().format(_dob!)),
+              ),
+              TextButton(
+                onPressed: _pickDob,
+                child: const Text('Select DOB'),
+              ),
             ]),
-            if (_isSaving)
+            if (_isSubmitting)
               const Padding(
-                  padding: EdgeInsets.only(top: 8),
-                  child: LinearProgressIndicator()),
+                padding: EdgeInsets.only(top: 8),
+                child: LinearProgressIndicator(),
+              ),
           ]),
         ),
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel')),
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
         ElevatedButton(
-            onPressed: _onSavePressed, child: const Text('Save')),
+          onPressed: _isSubmitting ? null : _onSavePressed,
+          child: const Text('Save'),
+        ),
       ],
     );
   }

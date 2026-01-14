@@ -19,7 +19,7 @@ class DailyMetric {
     required this.updatedAt,
   });
 
-  // Converts a DailyMetric instance to a map for Firestore.
+  /// Converts a DailyMetric instance to a map for Firestore.
   Map<String, dynamic> toMap() {
     return {
       'temperatureAvg': temperatureAvg,
@@ -31,27 +31,32 @@ class DailyMetric {
     };
   }
 
-  // Creates a DailyMetric instance from a Firestore document.
+  /// Creates a DailyMetric instance from a Firestore document (existing)
   factory DailyMetric.fromDoc(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    final Map<String, dynamic> data =
+    doc.data() as Map<String, dynamic>;
 
-    // Ensure updatedAt exists and is a Timestamp; fallback to now if not present.
-    Timestamp updated;
+    // Ensure updatedAt exists and is a Timestamp
     final rawUpdated = data['updatedAt'];
-    if (rawUpdated is Timestamp) {
-      updated = rawUpdated;
-    } else {
-      updated = Timestamp.now();
-    }
+    final Timestamp updated =
+    rawUpdated is Timestamp ? rawUpdated : Timestamp.now();
 
     return DailyMetric(
-      date: doc.id, // The document ID is the date.
-      temperatureAvg: (data['temperatureAvg'] as num?)?.toDouble() ?? 0.0,
-      temperatureMax: (data['temperatureMax'] as num?)?.toDouble() ?? 0.0,
-      temperatureMin: (data['temperatureMin'] as num?)?.toDouble() ?? 0.0,
+      date: doc.id, // document ID is the date
+      temperatureAvg:
+      (data['temperatureAvg'] as num?)?.toDouble() ?? 0.0,
+      temperatureMax:
+      (data['temperatureMax'] as num?)?.toDouble() ?? 0.0,
+      temperatureMin:
+      (data['temperatureMin'] as num?)?.toDouble() ?? 0.0,
       steps: (data['steps'] as num?)?.toInt() ?? 0,
       milk: (data['milk'] as num?)?.toDouble() ?? 0.0,
       updatedAt: updated,
     );
+  }
+
+  /// ✅ Adapter used by services (DO NOT REMOVE)
+  factory DailyMetric.fromFirestore(DocumentSnapshot doc) {
+    return DailyMetric.fromDoc(doc);
   }
 }

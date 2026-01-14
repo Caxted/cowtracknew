@@ -24,13 +24,16 @@ class _CattlePageState extends State<CattlePage> {
   final CattleService _cattleService = CattleService();
   int _selectedMetricRange = 30;
 
-  /// 🔹 Hook for future BLE belt data
+  /// 🔹 BLE / simulated belt data
   Future<void> onBeltDataReceived(Map<String, dynamic> payload) async {
     final metric = DailyMetric(
       date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
-      temperatureAvg: (payload['temperatureAvg'] as num?)?.toDouble() ?? 0.0,
-      temperatureMax: (payload['temperatureMax'] as num?)?.toDouble() ?? 0.0,
-      temperatureMin: (payload['temperatureMin'] as num?)?.toDouble() ?? 0.0,
+      temperatureAvg:
+      (payload['temperatureAvg'] as num?)?.toDouble() ?? 0.0,
+      temperatureMax:
+      (payload['temperatureMax'] as num?)?.toDouble() ?? 0.0,
+      temperatureMin:
+      (payload['temperatureMin'] as num?)?.toDouble() ?? 0.0,
       steps: (payload['steps'] as num?)?.toInt() ?? 0,
       milk: (payload['milk'] as num?)?.toDouble() ?? 0.0,
       updatedAt: Timestamp.now(),
@@ -40,22 +43,19 @@ class _CattlePageState extends State<CattlePage> {
   }
 
   void _simulateSync() {
-    final dummyPayload = {
+    onBeltDataReceived({
       'temperatureAvg': 38.4,
       'temperatureMax': 39.2,
       'temperatureMin': 37.6,
       'steps': 5200,
       'milk': 14.8,
-    };
-
-    onBeltDataReceived(dummyPayload);
+    });
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Simulated sync complete')),
     );
   }
 
-  /// 🔹 Seed demo data (DEV only)
   Future<void> seedDemoMetrics(int days) async {
     final now = DateTime.now();
 
@@ -106,25 +106,17 @@ class _CattlePageState extends State<CattlePage> {
                 return Column(
                   children: [
                     _buildLatestSnapshotCard(
-                      metrics.isNotEmpty ? metrics.first : null,
-                    ),
-
+                        metrics.isNotEmpty ? metrics.first : null),
                     const SizedBox(height: 16),
-
-                    /// 🔹 Weekly chart
                     MetricCharts(
                       cattleId: widget.cattleId,
                       isMonthly: false,
                     ),
-
                     const SizedBox(height: 24),
-
-                    /// 🔹 Monthly chart
                     MetricCharts(
                       cattleId: widget.cattleId,
                       isMonthly: true,
                     ),
-
                     _buildVaccinationCard(),
                   ],
                 );
@@ -133,7 +125,6 @@ class _CattlePageState extends State<CattlePage> {
           ],
         ),
       ),
-
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -149,9 +140,7 @@ class _CattlePageState extends State<CattlePage> {
             },
             child: const Icon(Icons.auto_graph),
           ),
-
           const SizedBox(height: 8),
-
           FloatingActionButton(
             heroTag: 'sync',
             onPressed: _simulateSync,
@@ -162,7 +151,7 @@ class _CattlePageState extends State<CattlePage> {
     );
   }
 
-  /// ---------------- UI HELPERS ----------------
+  /// ================= UI HELPERS =================
 
   Widget _buildMetricRangeSelector() {
     return Padding(
