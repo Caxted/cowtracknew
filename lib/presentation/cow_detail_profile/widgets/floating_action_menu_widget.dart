@@ -43,10 +43,7 @@ class _FloatingActionMenuWidgetState extends State<FloatingActionMenuWidget>
     _rotateAnimation = Tween<double>(
       begin: 0.0,
       end: 0.75,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
+    ).animate(_expandAnimation);
   }
 
   @override
@@ -56,9 +53,7 @@ class _FloatingActionMenuWidgetState extends State<FloatingActionMenuWidget>
   }
 
   void _toggleMenu() {
-    setState(() {
-      _isExpanded = !_isExpanded;
-    });
+    setState(() => _isExpanded = !_isExpanded);
 
     if (_isExpanded) {
       _animationController.forward();
@@ -67,9 +62,10 @@ class _FloatingActionMenuWidgetState extends State<FloatingActionMenuWidget>
     }
   }
 
+  /// ✅ FIXED: call action directly
   void _handleAction(VoidCallback action) {
-    _toggleMenu();
-    Future.delayed(const Duration(milliseconds: 150), action);
+    _toggleMenu();       // close menu
+    action();            // EXECUTE IMMEDIATELY
   }
 
   @override
@@ -77,21 +73,18 @@ class _FloatingActionMenuWidgetState extends State<FloatingActionMenuWidget>
     return Stack(
       alignment: Alignment.bottomRight,
       children: [
-        // Backdrop
         if (_isExpanded)
           GestureDetector(
             onTap: _toggleMenu,
             child: Container(
               width: double.infinity,
               height: double.infinity,
-              color: Colors.black.withValues(alpha: 0.3),
+              color: Colors.black.withOpacity(0.3),
             ),
           ),
 
-        // Action buttons
         ..._buildActionButtons(),
 
-        // Main FAB
         FloatingActionButton(
           onPressed: _toggleMenu,
           backgroundColor: AppTheme.lightTheme.colorScheme.primary,
@@ -115,7 +108,7 @@ class _FloatingActionMenuWidgetState extends State<FloatingActionMenuWidget>
   }
 
   List<Widget> _buildActionButtons() {
-    final List<Map<String, dynamic>> actions = _getActionsForTab();
+    final actions = _getActionsForTab();
 
     return actions.asMap().entries.map((entry) {
       final index = entry.key;
@@ -124,7 +117,7 @@ class _FloatingActionMenuWidgetState extends State<FloatingActionMenuWidget>
       return AnimatedBuilder(
         animation: _expandAnimation,
         builder: (context, child) {
-          final double offset = (index + 1) * 70.0 * _expandAnimation.value;
+          final offset = (index + 1) * 70.0 * _expandAnimation.value;
 
           return Positioned(
             bottom: offset + 16,
@@ -149,7 +142,7 @@ class _FloatingActionMenuWidgetState extends State<FloatingActionMenuWidget>
 
   List<Map<String, dynamic>> _getActionsForTab() {
     switch (widget.activeTabIndex) {
-      case 0: // Profile tab
+      case 0:
         return [
           {
             'icon': 'edit',
@@ -157,14 +150,8 @@ class _FloatingActionMenuWidgetState extends State<FloatingActionMenuWidget>
             'color': Colors.blue,
             'onPressed': widget.onEditProfile,
           },
-          {
-            'icon': 'photo_camera',
-            'label': 'Add Photo',
-            'color': Colors.green,
-            'onPressed': () => _showAddPhotoDialog(),
-          },
         ];
-      case 1: // Health Records tab
+      case 1:
         return [
           {
             'icon': 'add_circle',
@@ -172,26 +159,14 @@ class _FloatingActionMenuWidgetState extends State<FloatingActionMenuWidget>
             'color': Colors.orange,
             'onPressed': widget.onAddHealthRecord,
           },
-          {
-            'icon': 'event',
-            'label': 'Schedule Checkup',
-            'color': Colors.purple,
-            'onPressed': () => _showScheduleDialog(),
-          },
         ];
-      case 2: // Milk Statistics tab
+      case 2:
         return [
           {
             'icon': 'water_drop',
             'label': 'Log Milk',
             'color': Colors.blue,
             'onPressed': widget.onLogMilkProduction,
-          },
-          {
-            'icon': 'analytics',
-            'label': 'View Report',
-            'color': Colors.teal,
-            'onPressed': () => _showReportDialog(),
           },
         ];
       default:
@@ -213,27 +188,22 @@ class _FloatingActionMenuWidgetState extends State<FloatingActionMenuWidget>
           decoration: BoxDecoration(
             color: AppTheme.lightTheme.colorScheme.surface,
             borderRadius: BorderRadius.circular(20),
-            boxShadow: [
+            boxShadow: const [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
+                color: Colors.black26,
                 blurRadius: 4,
-                offset: const Offset(0, 2),
+                offset: Offset(0, 2),
               ),
             ],
           ),
-          child: Text(
-            label,
-            style: AppTheme.lightTheme.textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          child: Text(label),
         ),
         SizedBox(width: 2.w),
         FloatingActionButton.small(
+          heroTag: label, // unique
           onPressed: onPressed,
           backgroundColor: color,
           foregroundColor: Colors.white,
-          heroTag: label,
           child: CustomIconWidget(
             iconName: icon,
             color: Colors.white,
@@ -241,108 +211,6 @@ class _FloatingActionMenuWidgetState extends State<FloatingActionMenuWidget>
           ),
         ),
       ],
-    );
-  }
-
-  void _showAddPhotoDialog() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Add Photo',
-              style: AppTheme.lightTheme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            SizedBox(height: 2.h),
-            ListTile(
-              leading: CustomIconWidget(
-                iconName: 'photo_camera',
-                color: AppTheme.lightTheme.colorScheme.primary,
-                size: 24,
-              ),
-              title: const Text('Take Photo'),
-              onTap: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Camera feature coming soon')),
-                );
-              },
-            ),
-            ListTile(
-              leading: CustomIconWidget(
-                iconName: 'photo_library',
-                color: AppTheme.lightTheme.colorScheme.primary,
-                size: 24,
-              ),
-              title: const Text('Choose from Gallery'),
-              onTap: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Gallery feature coming soon')),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showScheduleDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Schedule Checkup'),
-        content: const Text('Schedule a veterinary checkup for this cow?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Checkup scheduled successfully')),
-              );
-            },
-            child: const Text('Schedule'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showReportDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Generate Report'),
-        content: const Text('Generate a detailed milk production report?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Report generated successfully')),
-              );
-            },
-            child: const Text('Generate'),
-          ),
-        ],
-      ),
     );
   }
 }

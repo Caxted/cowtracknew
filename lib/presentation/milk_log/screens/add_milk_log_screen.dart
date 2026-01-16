@@ -3,16 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../../../models/milk_log.dart';
-
 class AddMilkLogScreen extends StatefulWidget {
   final String cowId;
-  final String cowName; // ✅ Add cowName
+  final String cowName;
 
   const AddMilkLogScreen({
     Key? key,
     required this.cowId,
-    required this.cowName, // ✅ Add this line
+    required this.cowName,
   }) : super(key: key);
 
   @override
@@ -46,14 +44,14 @@ class _AddMilkLogScreenState extends State<AddMilkLogScreen> {
     setState(() => _isSaving = true);
 
     try {
-      final log = MilkLog(
-        id: '',
-        cowId: widget.cowId,
-        date: _selectedDate,
-        quantity: double.parse(_qtyCtl.text),
-      );
-
-      await FirebaseFirestore.instance.collection('milk_logs').add(log.toMap());
+      await FirebaseFirestore.instance.collection('milk_logs').add({
+        'cowId': widget.cowId,
+        'cowName': widget.cowName, // ✅ helpful for analytics
+        'ownerId': user.uid,       // ✅ REQUIRED
+        'quantity': double.parse(_qtyCtl.text),
+        'date': Timestamp.fromDate(_selectedDate), // ✅ Timestamp
+        'createdAt': FieldValue.serverTimestamp(),
+      });
 
       if (!mounted) return;
       Navigator.of(context).pop(true);
@@ -76,37 +74,51 @@ class _AddMilkLogScreenState extends State<AddMilkLogScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Milk Entry for ${widget.cowName}"), // ✅ Show cow name
+        title: Text("Milk Entry for ${widget.cowName}"),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Form(
           key: _formKey,
-          child: Column(children: [
-            TextFormField(
-              controller: _qtyCtl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Quantity (L)'),
-              validator: (v) {
-                if (v == null || v.isEmpty) return 'Enter quantity';
-                final val = double.tryParse(v);
-                if (val == null || val <= 0) return 'Enter valid quantity';
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(DateFormat.yMMMMd().format(_selectedDate)),
-                TextButton(onPressed: _pickDate, child: const Text("Pick Date")),
-              ],
-            ),
-            const SizedBox(height: 20),
-            if (_isSaving) const LinearProgressIndicator(),
-            const Spacer(),
-            ElevatedButton(onPressed: _saveLog, child: const Text("Save")),
-          ]),
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _qtyCtl,
+                keyboardType: TextInputType.number,
+                decoration:
+                const InputDecoration(labelText: 'Quantity (L)'),
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Enter quantity';
+                  final val = double.tryParse(v);
+                  if (val == null || val <= 0) {
+                    return 'Enter valid quantity';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(DateFormat.yMMMMd().format(_selectedDate)),
+                  TextButton(
+                    onPressed: _pickDate,
+                    child: const Text("Pick Date"),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              if (_isSaving) const LinearProgressIndicator(),
+              const Spacer(),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isSaving ? null : _saveLog,
+                  child: const Text("Save"),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
