@@ -8,10 +8,10 @@ class AddMilkDialog extends StatefulWidget {
   final String? cattleName;
 
   const AddMilkDialog({
-    Key? key,
+    super.key,
     required this.cattleId,
     this.cattleName,
-  }) : super(key: key);
+  });
 
   @override
   State<AddMilkDialog> createState() => _AddMilkDialogState();
@@ -19,10 +19,12 @@ class AddMilkDialog extends StatefulWidget {
 
 class _AddMilkDialogState extends State<AddMilkDialog> {
   final _formKey = GlobalKey<FormState>();
-  final _qtyController = TextEditingController();
+  final TextEditingController _qtyController = TextEditingController();
+
   DateTime _selectedDate = DateTime.now();
   bool _saving = false;
 
+  /// DATE PICKER
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -35,6 +37,7 @@ class _AddMilkDialogState extends State<AddMilkDialog> {
     }
   }
 
+  /// SAVE MILK LOG
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -50,18 +53,20 @@ class _AddMilkDialogState extends State<AddMilkDialog> {
 
     try {
       await FirebaseFirestore.instance.collection('milk_logs').add({
-        'cowId': widget.cattleId,
-        'ownerId': user.uid, // ✅ THIS FIXES EVERYTHING
+        'cowId': widget.cattleId,          // 🔑 DB field
+        'cowName': widget.cattleName,      // optional but useful
+        'ownerId': user.uid,
         'quantity': double.parse(_qtyController.text),
         'date': Timestamp.fromDate(_selectedDate),
         'createdAt': FieldValue.serverTimestamp(),
       });
 
       if (!mounted) return;
-      Navigator.pop(context, true);
+      Navigator.pop(context, true); // ✅ notify success
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to save milk log')),
+        const SnackBar(content: Text('Failed to save milk entry')),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -77,7 +82,9 @@ class _AddMilkDialogState extends State<AddMilkDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -85,6 +92,7 @@ class _AddMilkDialogState extends State<AddMilkDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              /// TITLE
               Text(
                 widget.cattleName != null
                     ? 'Milk Entry – ${widget.cattleName}'
@@ -94,22 +102,33 @@ class _AddMilkDialogState extends State<AddMilkDialog> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+
               const SizedBox(height: 16),
+
+              /// QUANTITY INPUT
               TextFormField(
                 controller: _qtyController,
-                keyboardType: TextInputType.number,
-                decoration:
-                const InputDecoration(labelText: 'Quantity (Litres)'),
+                keyboardType:
+                const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: 'Quantity (Litres)',
+                  border: OutlineInputBorder(),
+                ),
                 validator: (v) {
-                  if (v == null || v.isEmpty) return 'Enter quantity';
+                  if (v == null || v.trim().isEmpty) {
+                    return 'Enter quantity';
+                  }
                   final val = double.tryParse(v);
                   if (val == null || val <= 0) {
-                    return 'Enter valid quantity';
+                    return 'Enter a valid quantity';
                   }
                   return null;
                 },
               ),
+
               const SizedBox(height: 12),
+
+              /// DATE PICKER
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -120,14 +139,20 @@ class _AddMilkDialogState extends State<AddMilkDialog> {
                   ),
                 ],
               ),
+
               const SizedBox(height: 16),
+
               if (_saving) const LinearProgressIndicator(),
+
               const SizedBox(height: 12),
+
+              /// ACTION BUTTONS
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed:
+                    _saving ? null : () => Navigator.pop(context),
                     child: const Text('Cancel'),
                   ),
                   const SizedBox(width: 8),

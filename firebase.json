@@ -1,0 +1,1 @@
+{"flutter":{"platforms":{"android":{"default":{"projectId":"cowtrack-shyam","appId":"1:26132516162:android:dc4f1e183940d1e5ba4cdb","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"cowtrack-shyam","configurations":{"android":"1:26132516162:android:dc4f1e183940d1e5ba4cdb","ios":"1:26132516162:ios:cfb7d2c41588cea8ba4cdb"}}}}}}
