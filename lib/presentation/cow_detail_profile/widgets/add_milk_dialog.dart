@@ -7,10 +7,18 @@ class AddMilkDialog extends StatefulWidget {
   final String cattleId;
   final String? cattleName;
 
+  // 👇 NEW (for edit)
+  final String? docId;
+  final double? initialQty;
+  final DateTime? initialDate;
+
   const AddMilkDialog({
     super.key,
     required this.cattleId,
     this.cattleName,
+    this.docId,
+    this.initialQty,
+    this.initialDate,
   });
 
   @override
@@ -19,10 +27,21 @@ class AddMilkDialog extends StatefulWidget {
 
 class _AddMilkDialogState extends State<AddMilkDialog> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _qtyController = TextEditingController();
+  late final TextEditingController _qtyController;
 
-  DateTime _selectedDate = DateTime.now();
+  late DateTime _selectedDate;
   bool _saving = false;
+
+  bool get _isEdit => widget.docId != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _qtyController = TextEditingController(
+      text: widget.initialQty?.toString() ?? '',
+    );
+    _selectedDate = widget.initialDate ?? DateTime.now();
+  }
 
   /// DATE PICKER
   Future<void> _pickDate() async {
@@ -37,7 +56,7 @@ class _AddMilkDialogState extends State<AddMilkDialog> {
     }
   }
 
-  /// SAVE MILK LOG
+  /// SAVE / UPDATE MILK LOG
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -52,17 +71,29 @@ class _AddMilkDialogState extends State<AddMilkDialog> {
     setState(() => _saving = true);
 
     try {
-      await FirebaseFirestore.instance.collection('milk_logs').add({
-        'cowId': widget.cattleId,          // 🔑 DB field
-        'cowName': widget.cattleName,      // optional but useful
+      final payload = {
+        'cowId': widget.cattleId,
+        'cowName': widget.cattleName,
         'ownerId': user.uid,
         'quantity': double.parse(_qtyController.text),
         'date': Timestamp.fromDate(_selectedDate),
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+      };
+
+      final ref = FirebaseFirestore.instance.collection('milk_logs');
+
+      if (_isEdit) {
+        // ✏️ UPDATE EXISTING
+        await ref.doc(widget.docId).update(payload);
+      } else {
+        // ➕ ADD NEW
+        await ref.add({
+          ...payload,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
 
       if (!mounted) return;
-      Navigator.pop(context, true); // ✅ notify success
+      Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -94,7 +125,9 @@ class _AddMilkDialogState extends State<AddMilkDialog> {
             children: [
               /// TITLE
               Text(
-                widget.cattleName != null
+                _isEdit
+                    ? 'Edit Milk Entry'
+                    : widget.cattleName != null
                     ? 'Milk Entry – ${widget.cattleName}'
                     : 'Add Milk Entry',
                 style: const TextStyle(
@@ -158,7 +191,7 @@ class _AddMilkDialogState extends State<AddMilkDialog> {
                   const SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: _saving ? null : _save,
-                    child: const Text('Save'),
+                    child: Text(_isEdit ? 'Update' : 'Save'),
                   ),
                 ],
               ),

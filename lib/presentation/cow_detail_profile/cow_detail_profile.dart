@@ -33,6 +33,7 @@ class _CowDetailProfileState extends State<CowDetailProfile> {
     _loadMilk();
   }
 
+  /// ================= LOAD MILK =================
   Future<void> _loadMilk() async {
     setState(() => loading = true);
 
@@ -40,22 +41,23 @@ class _CowDetailProfileState extends State<CowDetailProfile> {
       final snap = await FirebaseFirestore.instance
           .collection('milk_logs')
           .where('cowId', isEqualTo: widget.cattle.id)
-          .get(); // ✅ NO orderBy
+          .get();
 
       List<Map<String, dynamic>> logs = snap.docs.map((d) {
         return {
+          'docId': d.id, // 🔑 needed for delete
           'date': (d['date'] as Timestamp).toDate(),
           'quantity': (d['quantity'] as num).toDouble(),
         };
       }).toList();
 
-      /// ✅ Sort locally
+      /// Sort latest first
       logs.sort(
             (a, b) =>
             (b['date'] as DateTime).compareTo(a['date'] as DateTime),
       );
 
-      /// ✅ Filter by selected range
+      /// Filter by selected range
       logs = logs.where((m) {
         final date = m['date'] as DateTime;
         return !date.isBefore(selectedRange.start) &&
@@ -65,17 +67,59 @@ class _CowDetailProfileState extends State<CowDetailProfile> {
       if (!mounted) return;
       setState(() => milkLogs = logs);
     } catch (e) {
-      debugPrint('❌ Milk load error: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to load milk entries')),
-        );
-      }
+      debugPrint('Milk load error: $e');
     } finally {
       if (mounted) setState(() => loading = false);
     }
   }
 
+  /// ================= ADD MILK =================
+  Future<void> _addMilk() async {
+    final result = await showDialog(
+      context: context,
+      builder: (_) => AddMilkDialog(
+        cattleId: widget.cattle.id,
+        cattleName: widget.cattle.name,
+      ),
+    );
+
+    if (result == true) _loadMilk();
+  }
+
+  /// ================= DELETE MILK =================
+  Future<void> _deleteMilk(String docId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete Milk Entry'),
+        content: const Text('Do you want to delete this entry?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    await FirebaseFirestore.instance
+        .collection('milk_logs')
+        .doc(docId)
+        .delete();
+
+    _loadMilk();
+  }
+
+  /// ================= DATE RANGE PICKER =================
   Future<void> _pickRange() async {
     final now = DateTime.now();
 
@@ -99,18 +143,6 @@ class _CowDetailProfileState extends State<CowDetailProfile> {
     _loadMilk();
   }
 
-  Future<void> _addMilk() async {
-    final result = await showDialog(
-      context: context,
-      builder: (_) => AddMilkDialog(
-        cattleId: widget.cattle.id,
-        cattleName: widget.cattle.name,
-      ),
-    );
-
-    if (result == true) _loadMilk();
-  }
-
   @override
   Widget build(BuildContext context) {
     final c = widget.cattle;
@@ -126,7 +158,7 @@ class _CowDetailProfileState extends State<CowDetailProfile> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            /// PHOTO
+            /// ===== PHOTO =====
             Container(
               height: 200,
               width: double.infinity,
@@ -136,14 +168,7 @@ class _CowDetailProfileState extends State<CowDetailProfile> {
               ),
               child: c.photoUrl == null
                   ? const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.camera_alt, size: 40),
-                    SizedBox(height: 8),
-                    Text('No photo available'),
-                  ],
-                ),
+                child: Icon(Icons.camera_alt, size: 40),
               )
                   : ClipRRect(
                 borderRadius: BorderRadius.circular(16),
@@ -165,6 +190,7 @@ class _CowDetailProfileState extends State<CowDetailProfile> {
 
             const SizedBox(height: 24),
 
+            /// ===== MILK HEADER =====
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -189,6 +215,7 @@ class _CowDetailProfileState extends State<CowDetailProfile> {
 
             const SizedBox(height: 12),
 
+            /// ===== MILK LIST =====
             if (loading)
               const Center(child: CircularProgressIndicator())
             else if (milkLogs.isEmpty)
@@ -204,13 +231,28 @@ class _CowDetailProfileState extends State<CowDetailProfile> {
                 separatorBuilder: (_, __) => const Divider(),
                 itemBuilder: (_, i) {
                   final log = milkLogs[i];
+
                   return ListTile(
-                    leading: const Icon(Icons.water_drop, color: Colors.blue),
-                    title:
-                    Text(DateFormat.yMMMd().format(log['date'])),
-                    trailing: Text(
-                      '${log['quantity']} L',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    leading:
+                    const Icon(Icons.water_drop, color: Colors.blue),
+                    title: Text(
+                      DateFormat.yMMMd().format(log['date']),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${log['quantity']} L',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete,
+                              color: Colors.red),
+                          onPressed: () =>
+                              _deleteMilk(log['docId']),
+                        ),
+                      ],
                     ),
                   );
                 },
@@ -228,8 +270,10 @@ class _CowDetailProfileState extends State<CowDetailProfile> {
         children: [
           SizedBox(
             width: 70,
-            child: Text(label,
-                style: const TextStyle(color: Colors.grey)),
+            child: Text(
+              label,
+              style: const TextStyle(color: Colors.grey),
+            ),
           ),
           Expanded(
             child: Text(
