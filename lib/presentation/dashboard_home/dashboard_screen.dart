@@ -13,7 +13,7 @@ import './widgets/stats_card_widget.dart';
 
 import 'package:cowtrack/widgets/chatbot/cow_chatbot.dart';
 import 'package:cowtrack/presentation/dashboard_home/vet_screen.dart';
-import 'package:cowtrack/presentation/farm_analytics/screens/farm_analytics_screen.dart'; // ✅ ADDED
+import 'package:cowtrack/presentation/farm_analytics/screens/farm_analytics_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -26,9 +26,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey =
   GlobalKey<RefreshIndicatorState>();
 
-  bool _isLoading = false;
+  late final String _ownerId;
+
   int _totalCattle = 0;
   double _todayMilk = 0.0;
+  bool _isLoading = true;
 
   final List<Map<String, dynamic>> _serviceCards = [
     {
@@ -70,7 +72,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     {
       "title": "Farm Analytics",
       "icon": "analytics",
-      "route": "/dashboard-screen", // This is handled specially below
+      "route": "/dashboard-screen",
     },
   ];
 
@@ -79,14 +81,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
       "title": "Rashtriya Gokul Mission",
       "subtitle": "Development & conservation of indigenous cattle breeds",
       "button_text": "Learn More",
-      "image": "https://images.pexels.com/photos/422218/pexels-photo-422218.jpeg",
+      "image":
+      "https://images.pexels.com/photos/422218/pexels-photo-422218.jpeg",
       "url": "https://dahd.nic.in/schemes/rashtriya-gokul-mission",
     },
     {
       "title": "National Livestock Mission",
       "subtitle": "Boost productivity & entrepreneurship in livestock sector",
       "button_text": "View Scheme",
-      "image": "https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg",
+      "image":
+      "https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg",
       "url": "https://dahd.nic.in/schemes/national-livestock-mission",
     },
   ];
@@ -94,64 +98,68 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    _ownerId = FirebaseAuth.instance.currentUser!.uid;
     _ensureUserDocument();
-    _loadDashboardData();
+    _listenDashboardData();
   }
 
   Future<void> _ensureUserDocument() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    final ref = FirebaseFirestore.instance.collection('users').doc(user.uid);
-
+    final ref =
+    FirebaseFirestore.instance.collection('users').doc(_ownerId);
     if (!(await ref.get()).exists) {
       await ref.set({'createdAt': FieldValue.serverTimestamp()});
     }
   }
 
-  Future<void> _loadDashboardData() async {
-    setState(() => _isLoading = true);
+  /// 🔥 REALTIME DASHBOARD LOGIC (CORRECT & STABLE)
+  void _listenDashboardData() {
+    final firestore = FirebaseFirestore.instance;
 
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      setState(() => _isLoading = false);
-      return;
-    }
+    /// ✅ TOTAL CATTLE (realtime)
+    firestore
+        .collection('cattle')
+        .where('ownerId', isEqualTo: _ownerId)
+        .snapshots()
+        .listen((snap) {
+      if (!mounted) return;
+      setState(() {
+        _totalCattle = snap.docs.length;
+      });
+    });
 
-    try {
-      final cattleSnap = await FirebaseFirestore.instance
-          .collection('cattle')
-          .where('ownerId', isEqualTo: user.uid)
-          .get();
-
+    /// ✅ TODAY MILK (realtime, date filtered in Dart)
+    firestore
+        .collection('milk_logs')
+        .where('ownerId', isEqualTo: _ownerId)
+        .snapshots()
+        .listen((snap) {
       final now = DateTime.now();
       final startOfDay = DateTime(now.year, now.month, now.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1));
 
-      final milkSnap = await FirebaseFirestore.instance
-          .collection('milk_logs')
-          .where('ownerId', isEqualTo: user.uid)
-          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-          .get();
+      double sum = 0.0;
 
-      double milk = 0;
-      for (var doc in milkSnap.docs) {
-        milk += (doc['quantity'] as num).toDouble();
+      for (var doc in snap.docs) {
+        final data = doc.data();
+        final date = (data['date'] as Timestamp).toDate();
+        final qty = (data['quantity'] as num).toDouble();
+
+        if (!date.isBefore(startOfDay) && date.isBefore(endOfDay)) {
+          sum += qty;
+        }
       }
 
+      if (!mounted) return;
       setState(() {
-        _totalCattle = cattleSnap.docs.length;
-        _todayMilk = milk;
+        _todayMilk = sum;
+        _isLoading = false;
       });
-    } catch (e) {
-      debugPrint('Dashboard error: $e');
-    } finally {
-      setState(() => _isLoading = false);
-    }
+    });
   }
 
   Future<void> _onRefresh() async {
     HapticFeedback.lightImpact();
-    await _loadDashboardData();
+    // realtime listeners already keep data fresh
   }
 
   void _onServiceCardTap(String route) {
@@ -173,7 +181,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _onAddCattleTap() {
-    HapticFeedback.lightImpact();
     Navigator.pushNamed(context, '/cattle-management-screen');
   }
 
@@ -192,6 +199,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               CustomScrollView(
                 slivers: [
+                  /// HEADER
                   SliverToBoxAdapter(
                     child: GreetingHeaderWidget(
                       farmerName: "Farmer",
@@ -203,13 +211,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       },
                     ),
                   ),
+
+                  /// FARM OVERVIEW
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: EdgeInsets.symmetric(horizontal: 4.w),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Farm Overview', style: theme.textTheme.titleLarge),
+                          Text('Farm Overview',
+                              style: theme.textTheme.titleLarge),
                           SizedBox(height: 2.h),
                           Row(
                             children: [
@@ -225,10 +236,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               Expanded(
                                 child: StatsCardWidget(
                                   title: 'Milk Production',
-                                  value: '${_todayMilk.toStringAsFixed(1)} L',
-                                  iconName: 'local_drink',
-                                  valueColor: AppTheme.getSuccessColor(!isDark),
+                                  value:
+                                  '${_todayMilk.toStringAsFixed(1)} L',
                                   subtitle: 'Today',
+                                  iconName: 'local_drink',
+                                  valueColor:
+                                  AppTheme.getSuccessColor(!isDark),
                                 ),
                               ),
                             ],
@@ -237,6 +250,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                   ),
+
+                  /// PROMOTIONAL BANNERS
                   SliverToBoxAdapter(
                     child: SizedBox(
                       height: 15.h,
@@ -266,10 +281,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                   ),
+
+                  /// SERVICE GRID (ALL BUTTONS PRESENT)
                   SliverPadding(
                     padding: EdgeInsets.symmetric(horizontal: 4.w),
                     sliver: SliverGrid(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
                         mainAxisSpacing: 12,
                         crossAxisSpacing: 12,
@@ -283,26 +301,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             iconName: item['icon'],
                             showBadge: item['badge'] != null,
                             badgeText: item['badge'],
-                            onTap: () => _onServiceCardTap(item['route']),
+                            onTap: () =>
+                                _onServiceCardTap(item['route']),
                           );
                         },
                         childCount: _serviceCards.length,
                       ),
                     ),
                   ),
+
                   SliverToBoxAdapter(child: SizedBox(height: 10.h)),
                 ],
               ),
+
               if (_isLoading)
                 const Positioned.fill(
-                  child: IgnorePointer(
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
+                  child: Center(child: CircularProgressIndicator()),
                 ),
             ],
           ),
         ),
       ),
+
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -315,6 +335,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
+
       bottomNavigationBar: const CustomBottomBar(currentIndex: 0),
     );
   }

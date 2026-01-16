@@ -15,9 +15,10 @@ class CowDetailProfile extends StatefulWidget {
 }
 
 class _CowDetailProfileState extends State<CowDetailProfile> {
-  DateTimeRange? selectedRange;
   bool loading = false;
   List<Map<String, dynamic>> milkLogs = [];
+
+  late DateTimeRange selectedRange;
 
   @override
   void initState() {
@@ -35,35 +36,44 @@ class _CowDetailProfileState extends State<CowDetailProfile> {
   Future<void> _loadMilk() async {
     setState(() => loading = true);
 
-    final snap = await FirebaseFirestore.instance
-        .collection('milk_logs')
-        .where('cowId', isEqualTo: widget.cattle.id)
-        .orderBy('date', descending: true)
-        .limit(50)
-        .get();
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('milk_logs')
+          .where('cowId', isEqualTo: widget.cattle.id)
+          .get(); // ✅ NO orderBy
 
-    List<Map<String, dynamic>> logs = snap.docs.map((d) {
-      return {
-        'date': (d['date'] as Timestamp).toDate(),
-        'quantity': (d['quantity'] as num).toDouble(),
-      };
-    }).toList();
+      List<Map<String, dynamic>> logs = snap.docs.map((d) {
+        return {
+          'date': (d['date'] as Timestamp).toDate(),
+          'quantity': (d['quantity'] as num).toDouble(),
+        };
+      }).toList();
 
-    if (selectedRange != null) {
+      /// ✅ Sort locally
+      logs.sort(
+            (a, b) =>
+            (b['date'] as DateTime).compareTo(a['date'] as DateTime),
+      );
+
+      /// ✅ Filter by selected range
       logs = logs.where((m) {
         final date = m['date'] as DateTime;
-        return date.isAfter(
-            selectedRange!.start.subtract(const Duration(days: 1))) &&
-            date.isBefore(
-                selectedRange!.end.add(const Duration(days: 1)));
+        return !date.isBefore(selectedRange.start) &&
+            !date.isAfter(selectedRange.end);
       }).toList();
-    }
 
-    if (!mounted) return;
-    setState(() {
-      milkLogs = logs;
-      loading = false;
-    });
+      if (!mounted) return;
+      setState(() => milkLogs = logs);
+    } catch (e) {
+      debugPrint('❌ Milk load error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to load milk entries')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
   }
 
   Future<void> _pickRange() async {
@@ -80,9 +90,7 @@ class _CowDetailProfileState extends State<CowDetailProfile> {
 
     if (picked.duration.inDays > 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Select a maximum of 7 days'),
-        ),
+        const SnackBar(content: Text('Select max 7 days')),
       );
       return;
     }
@@ -139,10 +147,7 @@ class _CowDetailProfileState extends State<CowDetailProfile> {
               )
                   : ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: Image.network(
-                  c.photoUrl!,
-                  fit: BoxFit.cover,
-                ),
+                child: Image.network(c.photoUrl!, fit: BoxFit.cover),
               ),
             ),
 
@@ -176,50 +181,40 @@ class _CowDetailProfileState extends State<CowDetailProfile> {
               ],
             ),
 
-            if (selectedRange != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Text(
-                  '${DateFormat.yMMMd().format(selectedRange!.start)} - '
-                      '${DateFormat.yMMMd().format(selectedRange!.end)}',
-                  style: const TextStyle(color: Colors.grey),
-                ),
-              ),
-
-            loading
-                ? const Center(child: CircularProgressIndicator())
-                : milkLogs.isEmpty
-                ? const Padding(
-              padding: EdgeInsets.all(24),
-              child: Center(child: Text('No milk entries')),
-            )
-                : ListView.separated(
-              shrinkWrap: true,
-              physics:
-              const NeverScrollableScrollPhysics(),
-              itemCount: milkLogs.length,
-              separatorBuilder: (_, __) =>
-              const Divider(),
-              itemBuilder: (_, i) {
-                final log = milkLogs[i];
-                return ListTile(
-                  leading: const Icon(
-                    Icons.water_drop,
-                    color: Colors.blue,
-                  ),
-                  title: Text(
-                    DateFormat.yMMMd()
-                        .format(log['date']),
-                  ),
-                  trailing: Text(
-                    '${log['quantity']} L',
-                    style: const TextStyle(
-                        fontWeight:
-                        FontWeight.bold),
-                  ),
-                );
-              },
+            Text(
+              '${DateFormat.yMMMd().format(selectedRange.start)} - '
+                  '${DateFormat.yMMMd().format(selectedRange.end)}',
+              style: const TextStyle(color: Colors.grey),
             ),
+
+            const SizedBox(height: 12),
+
+            if (loading)
+              const Center(child: CircularProgressIndicator())
+            else if (milkLogs.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: Text('No milk entries')),
+              )
+            else
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: milkLogs.length,
+                separatorBuilder: (_, __) => const Divider(),
+                itemBuilder: (_, i) {
+                  final log = milkLogs[i];
+                  return ListTile(
+                    leading: const Icon(Icons.water_drop, color: Colors.blue),
+                    title:
+                    Text(DateFormat.yMMMd().format(log['date'])),
+                    trailing: Text(
+                      '${log['quantity']} L',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  );
+                },
+              ),
           ],
         ),
       ),
@@ -233,10 +228,8 @@ class _CowDetailProfileState extends State<CowDetailProfile> {
         children: [
           SizedBox(
             width: 70,
-            child: Text(
-              label,
-              style: const TextStyle(color: Colors.grey),
-            ),
+            child: Text(label,
+                style: const TextStyle(color: Colors.grey)),
           ),
           Expanded(
             child: Text(
