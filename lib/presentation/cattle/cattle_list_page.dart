@@ -7,6 +7,7 @@ import 'package:cowtrack/models/cattle.dart';
 import 'package:cowtrack/services/cattle_service.dart';
 import 'package:cowtrack/services/storage_service.dart';
 import 'package:cowtrack/presentation/cattle/widgets/add_edit_cattle_dialog.dart';
+import 'package:cowtrack/presentation/cow_detail_profile/cow_detail_profile.dart';
 
 class CattleListPage extends StatefulWidget {
   const CattleListPage({Key? key}) : super(key: key);
@@ -77,23 +78,19 @@ class _CattleListPageState extends State<CattleListPage> {
                           : null,
                       child: cow.photoUrl == null
                           ? Text(
-                        cow.name.isNotEmpty ? cow.name[0].toUpperCase() : '?',
+                        cow.name.isNotEmpty
+                            ? cow.name[0].toUpperCase()
+                            : '?',
                       )
                           : null,
                     ),
                     title: Text(cow.name),
-                    subtitle: Text('Tag: ${cow.tagId} • Breed: ${cow.breed}'),
+                    subtitle:
+                    Text('Tag: ${cow.tagId} • Breed: ${cow.breed}'),
                     trailing: PopupMenuButton<String>(
                       onSelected: (v) async {
                         if (v == 'open') {
-                          Navigator.pushNamed(
-                            context,
-                            '/cattle-detail',
-                            arguments: {
-                              'cattleId': cow.id,
-                              'cattleName': cow.name,
-                            },
-                          );
+                          _openCowDetail(context, cow);
                         } else if (v == 'edit') {
                           await _onEditCattle(cow);
                         }
@@ -103,16 +100,9 @@ class _CattleListPageState extends State<CattleListPage> {
                         PopupMenuItem(value: 'edit', child: Text('Edit')),
                       ],
                     ),
-                    onTap: () {
-                      Navigator.pushNamed(
-                        context,
-                        '/cattle-detail',
-                        arguments: {
-                          'cattleId': cow.id,
-                          'cattleName': cow.name,
-                        },
-                      );
-                    },
+
+                    /// 🔥 FIXED HERE
+                    onTap: () => _openCowDetail(context, cow),
                   ),
                 ),
               );
@@ -123,6 +113,16 @@ class _CattleListPageState extends State<CattleListPage> {
       floatingActionButton: FloatingActionButton(
         onPressed: _onAddCattle,
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  /// ✅ SINGLE SOURCE OF TRUTH FOR NAVIGATION
+  void _openCowDetail(BuildContext context, Cattle cow) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CowDetailProfile(cattle: cow),
       ),
     );
   }

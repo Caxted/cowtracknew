@@ -15,16 +15,14 @@ class CowDetailProfile extends StatefulWidget {
 }
 
 class _CowDetailProfileState extends State<CowDetailProfile> {
-  bool loading = false;
-
   DateTimeRange? selectedRange;
+  bool loading = false;
   List<Map<String, dynamic>> milkLogs = [];
 
   @override
   void initState() {
     super.initState();
 
-    /// Default: last 7 days
     final now = DateTime.now();
     selectedRange = DateTimeRange(
       start: now.subtract(const Duration(days: 6)),
@@ -34,66 +32,56 @@ class _CowDetailProfileState extends State<CowDetailProfile> {
     _loadMilk();
   }
 
-  /// ✅ LOAD MILK SAFELY (NO INDEX REQUIRED)
   Future<void> _loadMilk() async {
     setState(() => loading = true);
 
-    try {
-      final snap = await FirebaseFirestore.instance
-          .collection('milk_logs')
-          .where('cowId', isEqualTo: widget.cattle.id)
-          .orderBy('date', descending: true)
-          .get();
+    final snap = await FirebaseFirestore.instance
+        .collection('milk_logs')
+        .where('cowId', isEqualTo: widget.cattle.id)
+        .orderBy('date', descending: true)
+        .limit(50)
+        .get();
 
-      List<Map<String, dynamic>> logs = snap.docs.map((d) {
-        return {
-          'date': (d['date'] as Timestamp).toDate(),
-          'quantity': (d['quantity'] as num).toDouble(),
-        };
+    List<Map<String, dynamic>> logs = snap.docs.map((d) {
+      return {
+        'date': (d['date'] as Timestamp).toDate(),
+        'quantity': (d['quantity'] as num).toDouble(),
+      };
+    }).toList();
+
+    if (selectedRange != null) {
+      logs = logs.where((m) {
+        final date = m['date'] as DateTime;
+        return date.isAfter(
+            selectedRange!.start.subtract(const Duration(days: 1))) &&
+            date.isBefore(
+                selectedRange!.end.add(const Duration(days: 1)));
       }).toList();
-
-      /// Filter by selected date range in Dart
-      if (selectedRange != null) {
-        logs = logs.where((m) {
-          final dt = m['date'] as DateTime;
-          return !dt.isBefore(selectedRange!.start) &&
-              !dt.isAfter(selectedRange!.end);
-        }).toList();
-      }
-
-      if (!mounted) return;
-      setState(() {
-        milkLogs = logs;
-        loading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => loading = false);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading milk entries')),
-      );
     }
+
+    if (!mounted) return;
+    setState(() {
+      milkLogs = logs;
+      loading = false;
+    });
   }
 
-  /// 📅 PICK DATE RANGE (MAX 7 DAYS)
   Future<void> _pickRange() async {
     final now = DateTime.now();
 
     final picked = await showDateRangePicker(
       context: context,
-      firstDate: now.subtract(const Duration(days: 365)),
+      firstDate: now.subtract(const Duration(days: 30)),
       lastDate: now,
       initialDateRange: selectedRange,
     );
 
     if (picked == null) return;
 
-    final diff = picked.end.difference(picked.start).inDays;
-    if (diff > 6) {
+    if (picked.duration.inDays > 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please select a range within 7 days'),
+          content: Text('Select a maximum of 7 days'),
         ),
       );
       return;
@@ -103,7 +91,6 @@ class _CowDetailProfileState extends State<CowDetailProfile> {
     _loadMilk();
   }
 
-  /// ➕ ADD MILK
   Future<void> _addMilk() async {
     final result = await showDialog(
       context: context,
@@ -113,25 +100,15 @@ class _CowDetailProfileState extends State<CowDetailProfile> {
       ),
     );
 
-    if (result == true) {
-      _loadMilk();
-    }
+    if (result == true) _loadMilk();
   }
 
   @override
   Widget build(BuildContext context) {
     final c = widget.cattle;
 
-    /// SAFELY EXTRACT VALUES (THIS FIXES YOUR ISSUE)
-    final name = c.name.isNotEmpty ? c.name : '-';
-    final tag = (c.tagId != null && c.tagId!.isNotEmpty) ? c.tagId! : '-';
-    final breed =
-    (c.breed != null && c.breed!.isNotEmpty) ? c.breed! : '-';
-    final dob =
-    c.dob != null ? DateFormat.yMMMd().format(c.dob!) : '-';
-
     return Scaffold(
-      appBar: AppBar(title: Text(name)),
+      appBar: AppBar(title: Text(c.name)),
       floatingActionButton: FloatingActionButton(
         onPressed: _addMilk,
         child: const Icon(Icons.add),
@@ -171,36 +148,37 @@ class _CowDetailProfileState extends State<CowDetailProfile> {
 
             const SizedBox(height: 20),
 
-            /// BASIC INFO (ALL FIELDS GUARANTEED)
-            _infoRow('Name', name),
-            _infoRow('Tag', tag),
-            _infoRow('Breed', breed),
-            _infoRow('DOB', dob),
+            _info('Name', c.name),
+            _info('Tag', c.tagId),
+            _info('Breed', c.breed),
+            _info(
+              'DOB',
+              c.dob == null
+                  ? '-'
+                  : DateFormat.yMMMd().format(c.dob!),
+            ),
 
             const SizedBox(height: 24),
 
-            /// MILK HEADER + CALENDAR
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
                   'Milk Entries',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style:
+                  TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 TextButton.icon(
-                  onPressed: _pickRange,
-                  icon: const Icon(Icons.calendar_month),
+                  icon: const Icon(Icons.calendar_today),
                   label: const Text('Select range'),
+                  onPressed: _pickRange,
                 ),
               ],
             ),
 
             if (selectedRange != null)
               Padding(
-                padding: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.only(bottom: 12),
                 child: Text(
                   '${DateFormat.yMMMd().format(selectedRange!.start)} - '
                       '${DateFormat.yMMMd().format(selectedRange!.end)}',
@@ -208,22 +186,20 @@ class _CowDetailProfileState extends State<CowDetailProfile> {
                 ),
               ),
 
-            /// MILK LIST
             loading
-                ? const Padding(
-              padding: EdgeInsets.all(32),
-              child: Center(child: CircularProgressIndicator()),
-            )
+                ? const Center(child: CircularProgressIndicator())
                 : milkLogs.isEmpty
                 ? const Padding(
-              padding: EdgeInsets.all(32),
+              padding: EdgeInsets.all(24),
               child: Center(child: Text('No milk entries')),
             )
                 : ListView.separated(
               shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
+              physics:
+              const NeverScrollableScrollPhysics(),
               itemCount: milkLogs.length,
-              separatorBuilder: (_, __) => const Divider(),
+              separatorBuilder: (_, __) =>
+              const Divider(),
               itemBuilder: (_, i) {
                 final log = milkLogs[i];
                 return ListTile(
@@ -232,13 +208,14 @@ class _CowDetailProfileState extends State<CowDetailProfile> {
                     color: Colors.blue,
                   ),
                   title: Text(
-                    DateFormat.yMMMd().format(log['date']),
+                    DateFormat.yMMMd()
+                        .format(log['date']),
                   ),
                   trailing: Text(
                     '${log['quantity']} L',
                     style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
+                        fontWeight:
+                        FontWeight.bold),
                   ),
                 );
               },
@@ -249,8 +226,7 @@ class _CowDetailProfileState extends State<CowDetailProfile> {
     );
   }
 
-  /// INFO ROW WIDGET
-  Widget _infoRow(String label, String value) {
+  Widget _info(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -264,7 +240,7 @@ class _CowDetailProfileState extends State<CowDetailProfile> {
           ),
           Expanded(
             child: Text(
-              value,
+              value.isEmpty ? '-' : value,
               style: const TextStyle(fontSize: 16),
             ),
           ),
